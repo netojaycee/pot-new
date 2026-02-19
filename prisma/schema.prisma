@@ -1,0 +1,330 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  user
+  admin
+}
+
+enum OrderStatus {
+  pending
+  paid
+  processing
+  shipped
+  delivered
+  cancelled
+  failed
+}
+
+enum ProductType {
+  item
+  food
+  giftbox
+}
+
+model User {
+  id               String  @id @default(cuid())
+  firstName        String
+  lastName         String
+  email            String  @unique
+  password         String?
+  role             Role    @default(user)
+  verificationCode String?
+  verified         Boolean @default(false)
+  googleId         String? @unique
+  image            Json?  // { url: string, pubId: string }
+
+  orders        Order[]
+  cart          Cart?
+  wishlist      Wishlist?
+  addresses     Address[]
+  reviews       Review[]
+  payments      Payment[] // via orders
+  otps          Otp[]
+  recentViews   RecentView[]
+  searchHistory SearchHistory[]
+  notifications Notification[]
+  returns       Return[]          @relation("UserReturns")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  slug        String      @unique
+  type        ProductType @default(item)
+  parentId    String?
+  parent      Category?   @relation("SubCategory", fields: [parentId], references: [id])
+  children    Category[]  @relation("SubCategory")
+  products    Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id                 String      @id @default(cuid())
+  name               String
+  description        String
+  price              Float
+  slug               String      @unique
+  availableQuantity  Int
+  type               ProductType @default(item)
+  soldCount          Int         @default(0)
+  reviewCount        Int         @default(0)
+  avgRating          Float       @default(0)
+  discountPercentage Float?
+  discountExpiry     DateTime?
+  tags               String[]
+  images             Json[] // array of { url: string, pubId: string }
+  whatIncluded       String[]    // ["Item 1", "Item 2", ...]
+  perfectFor         String[]    // ["Occasion 1", "Occasion 2", ...]
+  whyChoose          String[]    // ["Reason 1", "Reason 2", ...]
+  deliveryInfo       Json? // { title: string, details: string[] }
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  orderItems        OrderItem[]
+  cartItems         CartItem[]
+  wishlistItems     WishlistItem[]
+  reviews           Review[]
+  giftBoxComponents GiftBoxItem[]  @relation("GiftBoxComponents")
+  componentsInBox   GiftBoxItem[]  @relation("ComponentInGiftBox")
+
+  recentViews RecentView[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GiftBoxItem {
+  id       String @id @default(cuid())
+  quantity Int    @default(1)
+
+  giftBox   Product @relation("GiftBoxComponents", fields: [giftBoxId], references: [id], onDelete: Cascade)
+  giftBoxId String
+
+  product   Product @relation("ComponentInGiftBox", fields: [productId], references: [id])
+  productId String
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?    @unique
+  user      User?      @relation(fields: [userId], references: [id])
+  sessionId String?    @unique
+  items     CartItem[]
+  expiresAt DateTime
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+}
+
+model Wishlist {
+  id        String         @id @default(cuid())
+  userId    String?        @unique
+  user      User?          @relation(fields: [userId], references: [id])
+  sessionId String?        @unique
+  items     WishlistItem[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model WishlistItem {
+  id         String   @id @default(cuid())
+  wishlistId String
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([wishlistId, productId])
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  street    String
+  city      String
+  state     String
+  zip       String
+  country   String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  orderNumber           String      @unique // for UI
+  userId                String?
+  user                  User?       @relation(fields: [userId], references: [id])
+  email                 String?
+  firstName             String?
+  lastName              String?
+  guestSessionId        String?
+  status                OrderStatus @default(pending)
+  subtotal              Float
+  tax                   Float       @default(0) // Calculated on backend based on delivery address
+  shippingFee           Float       @default(0) // Calculated on backend based on delivery address
+  discountAmount        Float?      @default(0)
+  total                 Float
+  stripePaymentIntentId String?
+  payment               Payment?
+  promoCodeId           String?
+  promoCode             PromoCode?  @relation(fields: [promoCodeId], references: [id])
+  shippingAddress       Json? // TODO: For future use with saved Address model references
+  deliveryAddress       Json? // Address collected from checkout form (current)
+  occasion              String? // gift occasion (birthday, anniversary, etc.)
+  specialMessage        String? // gift message
+  items                 OrderItem[]
+  returns               Return[]
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Payment {
+  id                    String   @id @default(cuid())
+  orderId               String   @unique
+  order                 Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  stripePaymentIntentId String?
+  status                String // pending, succeeded, failed, refunded
+  amount                Float
+  refundAmount          Float?   @default(0)
+  currency              String   @default("usd")
+  details               Json? // webhook data, for insights
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User?    @relation(fields: [userId], references: [id])
+  userId                String?
+}
+
+model PromoCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  type      String // "percent" or "fixed"
+  value     Float
+  minOrder  Float?
+  maxUses   Int?
+  usedCount Int       @default(0)
+  expiry    DateTime?
+  active    Boolean   @default(true)
+  orders    Order[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Float    @default(0.0)
+  message   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reviews")
+}
+
+model Otp {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  type      String // "signup", "reset", "change_email" etc
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model RecentView {
+  id        String   @id @default(cuid())
+  userId    String?
+  sessionId String?
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  viewedAt  DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model SearchHistory {
+  id         String   @id @default(cuid())
+  userId     String?
+  sessionId  String?
+  query      String
+  searchedAt DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // order_update, payment_received, review_approved, admin_alert, system
+  title     String
+  body      String
+  data      Json?    // additional data payload
+  actionUrl String?
+  icon      String?
+  isRead    Boolean  @default(false)
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Return {
+  id               String   @id @default(cuid())
+  orderId          String
+  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User     @relation("UserReturns", fields: [userId], references: [id], onDelete: Cascade)
+  reason           String
+  items            Json     // array of { productId, quantity, price }
+  refundAmount     Float
+  status           String   @default("requested") // requested, approved, rejected, processed
+  rejectionReason  String?
+  refundId         String?  // Stripe refund ID
+  approvedAt       DateTime?
+  rejectedAt       DateTime?
+  refundedAt       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
