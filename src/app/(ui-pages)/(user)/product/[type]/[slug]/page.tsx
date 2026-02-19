@@ -9,8 +9,6 @@ import { AddToCartButton } from "@/components/product/AddToCartButton";
 import { ProductCard } from "@/components/product/ProductCard";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ReviewsSection } from "@/components/product/ReviewsSection";
-import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
 import { Star } from "lucide-react";
 import {
   Accordion,

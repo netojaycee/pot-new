@@ -9,13 +9,16 @@ import { Input } from "@/components/ui/input";
 import { logoutAction } from "@/lib/actions/auth.actions";
 import { toast } from "sonner";
 import Logo from "../Logo";
-import { navLinks } from "./navLinks";
 
 interface MobileNavContentProps {
-  user: any; // Replace with User type
+  user: any;
+  categories: any[];
 }
 
-export default function MobileNavContent({ user }: MobileNavContentProps) {
+export default function MobileNavContent({
+  user,
+  categories,
+}: MobileNavContentProps) {
   const [isPending, startTransition] = useTransition();
   const closeSheetRef = useRef<HTMLButtonElement>(null);
 
@@ -86,14 +89,26 @@ export default function MobileNavContent({ user }: MobileNavContentProps) {
             <p className="text-sm font-bold uppercase text-gray-700">Shop</p>
           </div>
           <ul className="">
-            {navLinks.map((category) => (
-              <li key={category.href}>
+            {/* Gift Packages Link */}
+            <li>
+              <SheetClose asChild>
+                <Link
+                  href="/category/giftbox"
+                  className="block text-sm font-normal text-gray-800 hover:text-primary transition-colors px-3 py-3 underline"
+                >
+                  Gift Packages
+                </Link>
+              </SheetClose>
+            </li>
+            {/* Dynamic Category Links */}
+            {categories.map((category: any) => (
+              <li key={category.id}>
                 <SheetClose asChild>
                   <Link
-                    href={category.href}
+                    href={`/category/${category.type}/${category.slug}`}
                     className="block text-sm font-normal text-gray-800 hover:text-primary transition-colors px-3 py-3 underline"
                   >
-                    {category.title}
+                    {category.name || category.title}
                   </Link>
                 </SheetClose>
               </li>

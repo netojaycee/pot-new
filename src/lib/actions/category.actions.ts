@@ -17,6 +17,8 @@ import { revalidatePath } from "next/cache";
  */
 export async function getCategoriesAction(filters?: {
   type?: "item" | "food" | "giftbox";
+  limit?: number;
+  offset?: number;
 }) {
   try {
     const categories = await categoryService.getAllCategories(filters);

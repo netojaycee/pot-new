@@ -45,7 +45,7 @@ export const categoryService = {
   /**
    * Get all categories with hierarchy
    */
-  async getAllCategories(filters?: { type?: "item" | "food" | "giftbox" }): Promise<any[]> {
+  async getAllCategories(filters?: { type?: "item" | "food" | "giftbox", limit?: number, offset?: number }): Promise<any[]> {
     const cacheKey = `categories:all:${filters?.type || "all"}`;
 
     try {
@@ -64,6 +64,8 @@ export const categoryService = {
         _count: { select: { products: true } },
       },
       orderBy: { name: "asc" },
+      skip: filters?.offset,
+      take: filters?.limit,
     });
 
     try {

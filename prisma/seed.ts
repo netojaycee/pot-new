@@ -248,6 +248,103 @@ async function main() {
       },
     });
 
+    // Additional giftbox categories
+    const giftsForHim = await prisma.category.upsert({
+      where: { slug: generateSlug("Gifts for him") },
+      update: {},
+      create: {
+        id: cuid(),
+        name: "Gifts for him",
+        description: "Curated gifts specially selected for the men in your life",
+        slug: generateSlug("Gifts for him"),
+        type: "giftbox",
+      },
+    });
+
+    const giftsForHer = await prisma.category.upsert({
+      where: { slug: generateSlug("Gifts for her") },
+      update: {},
+      create: {
+        id: cuid(),
+        name: "Gifts for her",
+        description: "Thoughtfully chosen gifts perfect for the special women in your life",
+        slug: generateSlug("Gifts for her"),
+        type: "giftbox",
+      },
+    });
+
+    const weddingAnniversary = await prisma.category.upsert({
+      where: { slug: generateSlug("Wedding anniversary") },
+      update: {},
+      create: {
+        id: cuid(),
+        name: "Wedding anniversary",
+        description: "Celebrate love and commitment with the perfect anniversary gift",
+        slug: generateSlug("Wedding anniversary"),
+        type: "giftbox",
+      },
+    });
+
+    const birthdayGifts = await prisma.category.upsert({
+      where: { slug: generateSlug("Birthday gifts") },
+      update: {},
+      create: {
+        id: cuid(),
+        name: "Birthday gifts",
+        description: "Make every birthday special with our curated gift packages",
+        slug: generateSlug("Birthday gifts"),
+        type: "giftbox",
+      },
+    });
+
+    const specialSale = await prisma.category.upsert({
+      where: { slug: generateSlug("Special sale") },
+      update: {},
+      create: {
+        id: cuid(),
+        name: "Special sale",
+        description: "Exclusive deals and limited-time offers on premium gifts",
+        slug: generateSlug("Special sale"),
+        type: "giftbox",
+      },
+    });
+
+    const customizeGift = await prisma.category.upsert({
+      where: { slug: generateSlug("Customize a gift") },
+      update: {},
+      create: {
+        id: cuid(),
+        name: "Customize a gift",
+        description: "Create your own personalized gift package tailored to perfection",
+        slug: generateSlug("Customize a gift"),
+        type: "giftbox",
+      },
+    });
+
+    const giftForPets = await prisma.category.upsert({
+      where: { slug: generateSlug("Gift for pets") },
+      update: {},
+      create: {
+        id: cuid(),
+        name: "Gift for pets",
+        description: "Delight your furry friends with our pet-friendly gift selections",
+        slug: generateSlug("Gift for pets"),
+        type: "giftbox",
+      },
+    });
+
+    const burialGift = await prisma.category.upsert({
+      where: { slug: generateSlug("Burial gift") },
+      update: {},
+      create: {
+        id: cuid(),
+        name: "Burial gift",
+        description: "Thoughtful and respectful gifts to honor and remember loved ones",
+        slug: generateSlug("Burial gift"),
+        type: "giftbox",
+      },
+    });
+
     console.log("✅ Categories created\n");
 
     // ============ ITEMS (Electronics & Accessories) ============
