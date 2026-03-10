@@ -29,14 +29,14 @@ export default function Header() {
           </div>
           
            {/* Wishlist Icon */}
-            <button className="transition-all hover:text-primary duration-300 hover:scale-110 shrink-0">
+            {/* <button className="transition-all hover:text-primary duration-300 hover:scale-110 shrink-0">
               <Heart className="w-6 h-6" />
-            </button>
+            </button> */}
 
             {/* Gift Icon */}
-            <button className="transition-all hover:text-primary duration-300 hover:scale-110 shrink-0">
+            {/* <button className="transition-all hover:text-primary duration-300 hover:scale-110 shrink-0">
               <Gift className="w-6 h-6" />
-            </button>
+            </button> */}
 
             {/* Cart Icon */}
             <Cart />
@@ -55,6 +55,8 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <DesktopNav />
+        
+         {/* fjndk */}
       </div>
 
       {/* <Separator className="lg:block hidden mt-4" /> */}

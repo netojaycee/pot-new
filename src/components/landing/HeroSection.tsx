@@ -31,7 +31,7 @@ export function HeroSection() {
             <div className="flex justify-start">
               <Button asChild>
                 <Link
-                  href="/products?type=giftbox"
+                  href="/products"
                   className="w-1/2"
                 >
                   Shop Gifts

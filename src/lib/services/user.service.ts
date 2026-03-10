@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { redis } from "@/lib/redis";
 import { hashPassword, verifyPassword } from "@/lib/auth";
 import { z } from "zod";
+import { cloudinaryService } from "./cloudinary.service";
+import { changePasswordSchema, updateProfileSchema } from "../schema";
 
 const CACHE_TTL = 3600; // 1 hour
 
@@ -9,18 +11,6 @@ const CACHE_TTL = 3600; // 1 hour
 export type UserResult<T> =
   | { success: true; data: T }
   | { success: false; error: string; code: string };
-
-// Validation Schemas
-export const updateProfileSchema = z.object({
-  firstName: z.string().min(1, "First name required").optional(),
-  lastName: z.string().min(1, "Last name required").optional(),
-  image: z.string().url().optional(),
-});
-
-export const changePasswordSchema = z.object({
-  currentPassword: z.string(),
-  newPassword: z.string().min(6, "Password must be at least 6 characters"),
-});
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
@@ -139,23 +129,164 @@ export const userService = {
     });
   },
 
+  /**
+   * Get all customers (admin only)
+   */
+  async getAllCustomers(
+    limit: number = 50,
+    offset: number = 0,
+    search?: string,
+  ): Promise<UserResult<{ customers: any[]; total: number }>> {
+    try {
+      const where: any = { role: "user" }; // Only non-admin users
+
+      // Filter by search term (name or email)
+      if (search && search.trim()) {
+        where.OR = [
+          { firstName: { contains: search, mode: "insensitive" } },
+          { lastName: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+        ];
+      }
+
+      const [customers, total] = await Promise.all([
+        prisma.user.findMany({
+          where,
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            image: true,
+            verified: true,
+            role: true,
+            createdAt: true,
+            updatedAt: true,
+            _count: {
+              select: { orders: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: limit,
+          skip: offset,
+        }),
+        prisma.user.count({ where }),
+      ]);
+
+      // Calculate total spent for each customer
+      const customersWithStats = await Promise.all(
+        customers.map(async (customer) => {
+          const totalSpent = await prisma.order.aggregate({
+            where: { userId: customer.id },
+            _sum: { total: true },
+          });
+
+          return {
+            ...customer,
+            totalSpent: totalSpent._sum.total || 0,
+          };
+        }),
+      );
+
+      return { success: true, data: { customers: customersWithStats, total } };
+    } catch (error) {
+      console.error("Get all customers error:", error);
+      return {
+        success: false,
+        error: "Failed to fetch customers",
+        code: "FETCH_ERROR",
+      };
+    }
+  },
+
   // ============ WRITE OPERATIONS ============
 
   /**
    * Update user profile
    */
-  async updateProfile(userId: string, data: UpdateProfileInput): Promise<UserResult<any>> {
+  // async updateProfile(userId: string, data: UpdateProfileInput): Promise<UserResult<any>> {
+  //   try {
+  //     const validated = updateProfileSchema.parse(data);
+
+  //     const user = await prisma.user.update({
+  //       where: { id: userId },
+  //       data: validated,
+  //       select: {
+  //         id: true,
+  //         firstName: true,
+  //         lastName: true,
+  //         email: true,
+  //         image: true,
+  //         role: true,
+  //         verified: true,
+  //       },
+  //     });
+
+  //     await invalidateUserCache(userId);
+
+  //     return { success: true, data: user };
+  //   } catch (error) {
+  //     if (error instanceof z.ZodError) {
+  //       return {
+  //         success: false,
+  //         error: error.issues[0].message,
+  //         code: "VALIDATION_ERROR",
+  //       };
+  //     }
+  //     console.error("Update profile error:", error);
+  //     return {
+  //       success: false,
+  //       error: "Failed to update profile",
+  //       code: "UPDATE_ERROR",
+  //     };
+  //   }
+  // },
+
+  async updateProfile(
+    userId: string,
+    data: UpdateProfileInput,
+    imageFile?: File,
+    oldImagePubId?: string,
+  ): Promise<any> {
     try {
       const validated = updateProfileSchema.parse(data);
+      let imageData: { pubId: string; secureUrl: string } | null = null;
+
+      // Handle image upload if provided
+      if (imageFile) {
+        const uploadResult = await cloudinaryService.replaceImage(
+          imageFile,
+          oldImagePubId,
+          "user-profiles-pot",
+        );
+
+        if (!uploadResult.success) {
+          return {
+            success: false,
+            error: uploadResult.error,
+            code: "UPLOAD_ERROR",
+          };
+        }
+
+        imageData = uploadResult.data;
+      }
+
+      // Update user with profile data and image
+      const updateData: any = { ...validated };
+      if (imageData) {
+        updateData.image = imageData;
+      }
 
       const user = await prisma.user.update({
         where: { id: userId },
-        data: validated,
+        data: updateData,
         select: {
           id: true,
           firstName: true,
           lastName: true,
           email: true,
+          phone: true,
           image: true,
           role: true,
           verified: true,
@@ -176,16 +307,19 @@ export const userService = {
       console.error("Update profile error:", error);
       return {
         success: false,
-        error: "Failed to update profile",
+        error:
+          error instanceof Error ? error.message : "Failed to update profile",
         code: "UPDATE_ERROR",
       };
     }
   },
-
   /**
    * Change password
    */
-  async changePassword(userId: string, data: ChangePasswordInput): Promise<UserResult<any>> {
+  async changePassword(
+    userId: string,
+    data: ChangePasswordInput,
+  ): Promise<UserResult<any>> {
     try {
       const validated = changePasswordSchema.parse(data);
 
@@ -204,7 +338,10 @@ export const userService = {
       }
 
       // Verify current password
-      const isValid = await verifyPassword(validated.currentPassword, user.password);
+      const isValid = await verifyPassword(
+        validated.currentPassword,
+        user.password,
+      );
       if (!isValid) {
         return {
           success: false,
@@ -255,7 +392,7 @@ export const userService = {
       zip: string;
       country: string;
       isDefault?: boolean;
-    }
+    },
   ): Promise<UserResult<any>> {
     try {
       // If this is default, unset other defaults
@@ -296,7 +433,7 @@ export const userService = {
       zip: string;
       country: string;
       isDefault: boolean;
-    }>
+    }>,
   ): Promise<UserResult<any>> {
     try {
       // Verify address belongs to user
@@ -341,7 +478,10 @@ export const userService = {
   /**
    * Delete address
    */
-  async deleteAddress(userId: string, addressId: string): Promise<UserResult<any>> {
+  async deleteAddress(
+    userId: string,
+    addressId: string,
+  ): Promise<UserResult<any>> {
     try {
       // Verify address belongs to user
       const address = await prisma.address.findUnique({
@@ -372,4 +512,5 @@ export const userService = {
       };
     }
   },
+  
 };

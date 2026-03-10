@@ -79,7 +79,7 @@ export async function createReviewAction(input: CreateReviewInput) {
     const result = await reviewService.createReview(validated.data);
 
     if (result.success) {
-      revalidatePath(`/product/${input.productId}`);
+      revalidatePath(`/products/${input.productId}`);
     }
 
     return result;

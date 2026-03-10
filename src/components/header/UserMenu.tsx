@@ -49,6 +49,15 @@ export default function UserMenu({ user }: UserMenuProps) {
 
             {/* Links Section */}
             <div className='py-2'>
+              {user.role === "admin" && (
+                <Link
+                  href="/admin"
+                  className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Admin Dashboard
+                </Link>
+              )}
               <Link
                 href='/orders'
                 className='block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors'

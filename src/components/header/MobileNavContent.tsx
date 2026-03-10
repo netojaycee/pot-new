@@ -43,16 +43,6 @@ export default function MobileNavContent({
   return (
     <div className="flex flex-col h-full">
       <Logo />
-      {/* Search Bar */}
-      <div className="mb-6 mt-3">
-        <div className="relative">
-          <Input
-            placeholder="Search for anything..."
-            className="pl-10 pr-3 py-2 text-sm"
-          />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-        </div>
-      </div>
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
@@ -66,6 +56,18 @@ export default function MobileNavContent({
               </p>
             </div>
             <ul className="">
+              {user.role === "admin" && (
+                <li>
+                  <SheetClose asChild>
+                    <Link
+                      href="/admin"
+                      className="block text-sm font-normal text-gray-800 hover:text-primary transition-colors px-3 py-3 underline"
+                    >
+                      Admin Dashboard{" "}
+                    </Link>
+                  </SheetClose>
+                </li>
+              )}
               {accountLinks.map((link) => (
                 <li key={link.href}>
                   <SheetClose asChild>

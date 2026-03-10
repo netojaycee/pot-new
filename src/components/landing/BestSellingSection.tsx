@@ -21,7 +21,7 @@ export async function BestSellingSection() {
 
       {/* Products Grid */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        {products.map((product) => (
+        {products.map((product: any) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>

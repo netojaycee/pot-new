@@ -129,7 +129,9 @@ function OrderConfirmationContent() {
                 {order.discountAmount > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Discount</span>
-                    <span className="text-green-600">-£{order.discountAmount?.toFixed(2)}</span>
+                    <span className="text-green-600">
+                      -£{order.discountAmount?.toFixed(2)}
+                    </span>
                   </div>
                 )}
                 {order.tax > 0 && (

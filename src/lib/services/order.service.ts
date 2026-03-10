@@ -36,10 +36,10 @@ export const createOrderSchema = z.object({
   deliveryAddress: z
     .object({
       street: z.string().min(1),
-      city: z.string().min(1),
-      state: z.string().min(1),
+      town: z.string().min(1),
+      // state: z.string().min(1),
       zip: z.string().min(1),
-      country: z.string().min(1),
+      county: z.string().min(1),
     })
     .optional(), // Address collected from checkout form
   promoCodeId: z.string().optional(),
@@ -166,16 +166,33 @@ export const orderService = {
   },
 
   /**
-   * Get single order by ID
+   * Get single order by ID or order number
    */
   async getOrder(orderId: string): Promise<OrderResult<any>> {
     try {
-      const order = await prisma.order.findUnique({
-        where: { id: orderId },
+      const order = await prisma.order.findFirst({
+        where: {
+          OR: [
+            { id: orderId },
+            { orderNumber: orderId.toString().toUpperCase() }
+          ]
+        },
         include: {
-          items: { include: { product: true } },
+          items: { 
+            include: { 
+              product: true
+            } 
+          },
           promoCode: true,
           payment: true,
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            }
+          },
         },
       });
 
@@ -193,6 +210,63 @@ export const orderService = {
       return {
         success: false,
         error: "Failed to fetch order",
+        code: "FETCH_ERROR",
+      };
+    }
+  },
+
+  /**
+   * Get all orders (admin only)
+   */
+  async getAllOrders(
+    limit: number = 50,
+    offset: number = 0,
+    search?: string,
+    status?: string,
+  ): Promise<OrderResult<{ orders: any[]; total: number }>> {
+    try {
+      const where: any = {};
+
+      // Filter by search term (order number or customer email/name)
+      if (search && search.trim()) {
+        where.OR = [
+          { orderNumber: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+          { firstName: { contains: search, mode: "insensitive" } },
+          { lastName: { contains: search, mode: "insensitive" } },
+        ];
+      }
+
+      // Filter by status
+      if (status && status !== "all") {
+        where.status = status;
+      }
+
+      const [orders, total] = await Promise.all([
+        prisma.order.findMany({
+          where,
+          include: {
+            items: {
+              include: { product: { select: { name: true, images: true } } },
+            },
+            promoCode: true,
+            user: {
+              select: { id: true, firstName: true, lastName: true, email: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: limit,
+          skip: offset,
+        }),
+        prisma.order.count({ where }),
+      ]);
+
+      return { success: true, data: { orders, total } };
+    } catch (error) {
+      console.error("Get all orders error:", error);
+      return {
+        success: false,
+        error: "Failed to fetch orders",
         code: "FETCH_ERROR",
       };
     }
@@ -267,9 +341,9 @@ export const orderService = {
       }
 
       // Calculate tax and shipping based on delivery address
-      const country = validated.deliveryAddress?.country || "United Kingdom";
-      const tax = calculateTax(subtotal - discountAmount, country);
-      const shippingFee = calculateShipping(subtotal - discountAmount, country);
+      const county = validated.deliveryAddress?.county || "United Kingdom";
+      const tax = calculateTax(subtotal - discountAmount, county);
+      const shippingFee = calculateShipping(subtotal - discountAmount, county);
 
       // Calculate final total: subtotal - discount + tax + shipping
       const total = subtotal - discountAmount + tax + shippingFee;

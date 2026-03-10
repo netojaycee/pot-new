@@ -61,20 +61,42 @@ export const productService = {
    */
   async getProducts(filters?: {
     categoryId?: string;
+    category?: string;
     type?: "item" | "food" | "giftbox";
     search?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    minRating?: number;
     limit?: number;
     offset?: number;
     sortBy?: "newest" | "popular" | "price_asc" | "price_desc" | "rating";
-  }): Promise<any[]> {
-    const { categoryId, type, search, limit = 20, offset = 0, sortBy = "newest" } = filters || {};
+  }): Promise<any> {
+    const {
+      category,
+      type,
+      search,
+      minPrice,
+      maxPrice,
+      minRating,
+      limit = 20,
+      offset = 0,
+      sortBy = "newest",
+    } = filters || {};
+    let { categoryId } = filters || {};
+    // If category slug is provided, fetch the category to get its ID
+    if (category && !categoryId) {
+      const cat = await prisma.category.findUnique({
+        where: { slug: category },
+      });
+      if (cat) categoryId = cat.id;
+    }
 
     // Generate cache key based on filters
-    const cacheKey = `products:list:${JSON.stringify({ categoryId, type, search, limit, offset, sortBy })}`;
+    const cacheKey = `products:list:${JSON.stringify({ categoryId, type, search, minPrice, maxPrice, minRating, limit, offset, sortBy })}`;
 
     try {
       const cached = await redis.get(cacheKey);
-      if (cached) return cached as any[];
+      if (cached) return cached as { data: any[]; total: number };
     } catch (error) {
       console.error("Redis get error:", error);
     }
@@ -83,6 +105,9 @@ export const productService = {
     const where: any = {};
     if (categoryId) where.categoryId = categoryId;
     if (type) where.type = type;
+    if (minPrice !== undefined) where.price = { ...where.price, gte: minPrice };
+    if (maxPrice !== undefined) where.price = { ...where.price, lte: maxPrice };
+    if (minRating !== undefined) where.avgRating = { gte: minRating };
     if (search) {
       where.OR = [
         { name: { contains: search, mode: "insensitive" } },
@@ -100,6 +125,9 @@ export const productService = {
       rating: { avgRating: "desc" },
     };
 
+    // Get total count
+    const total = await prisma.product.count({ where });
+
     const products = await prisma.product.findMany({
       where,
       include: { category: true, _count: { select: { reviews: true } } },
@@ -108,14 +136,16 @@ export const productService = {
       skip: offset,
     });
 
+    const result = { data: products, total };
+
     // Cache
     try {
-      await redis.set(cacheKey, products, { ex: CACHE_TTL });
+      await redis.set(cacheKey, result, { ex: CACHE_TTL });
     } catch (error) {
       console.error("Redis set error:", error);
     }
 
-    return products;
+    return result;
   },
 
   /**
@@ -137,7 +167,14 @@ export const productService = {
       },
       include: {
         category: true,
-        reviews: { select: { id: true, rating: true, message: true, user: { select: { firstName: true, image: true } } } },
+        reviews: {
+          select: {
+            id: true,
+            rating: true,
+            message: true,
+            user: { select: { firstName: true, image: true } },
+          },
+        },
         _count: { select: { reviews: true } },
       },
     });
@@ -163,7 +200,11 @@ export const productService = {
   /**
    * Get related products from same category (excludes current product)
    */
-  async getRelatedProducts(productId: string, categoryId: string, limit = 4): Promise<any[]> {
+  async getRelatedProducts(
+    productId: string,
+    categoryId: string,
+    limit = 4,
+  ): Promise<any[]> {
     const cacheKey = `products:related:${productId}:${categoryId}:${limit}`;
 
     try {
@@ -213,7 +254,11 @@ export const productService = {
       const slug = validated.name.toLowerCase().replace(/\s+/g, "-");
       const existing = await prisma.product.findUnique({ where: { slug } });
       if (existing) {
-        return { success: false, error: "Product with this name already exists", code: "PRODUCT_EXISTS" };
+        return {
+          success: false,
+          error: "Product with this name already exists",
+          code: "PRODUCT_EXISTS",
+        };
       }
 
       const product = await prisma.product.create({
@@ -248,7 +293,10 @@ export const productService = {
   /**
    * Update an existing product
    */
-  async updateProduct(id: string, data: UpdateProductInput): Promise<ProductResult<any>> {
+  async updateProduct(
+    id: string,
+    data: UpdateProductInput,
+  ): Promise<ProductResult<any>> {
     try {
       const validated = updateProductSchema.parse(data);
 

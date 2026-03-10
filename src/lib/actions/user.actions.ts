@@ -5,10 +5,10 @@ import {
   userService,
   UpdateProfileInput,
   ChangePasswordInput,
-  updateProfileSchema,
-  changePasswordSchema,
 } from "@/lib/services/user.service";
+
 import { revalidatePath } from "next/cache";
+import { changePasswordSchema, updateProfileSchema } from "../schema";
 
 // ============ AUTHENTICATED READ ACTIONS ============
 
@@ -94,7 +94,46 @@ export async function getOrdersAction(limit = 10, offset = 0) {
 /**
  * Update user profile
  */
-export async function updateProfileAction(input: UpdateProfileInput) {
+// export async function updateProfileAction(input: UpdateProfileInput) {
+//   try {
+//     const session = await getSession();
+//     if (!session || !("userId" in session)) {
+//       return {
+//         success: false,
+//         error: "Unauthorized",
+//         code: "UNAUTHORIZED",
+//       };
+//     }
+
+//     const validated = updateProfileSchema.safeParse(input);
+//     if (!validated.success) {
+//       return {
+//         success: false,
+//         error: validated.error.issues[0].message,
+//         code: "VALIDATION_ERROR",
+//       };
+//     }
+
+//     const result = await userService.updateProfile(session.userId, validated.data);
+
+//     if (result.success) {
+//       revalidatePath("/account");
+//     }
+
+//     return result;
+//   } catch (error) {
+//     console.error("Update profile action error:", error);
+//     return {
+//       success: false,
+//       error: "Failed to update profile",
+//       code: "UPDATE_ERROR",
+//     };
+//   }
+// }
+
+export async function updateProfileAction(
+  input: FormData | UpdateProfileInput,
+) {
   try {
     const session = await getSession();
     if (!session || !("userId" in session)) {
@@ -105,7 +144,24 @@ export async function updateProfileAction(input: UpdateProfileInput) {
       };
     }
 
-    const validated = updateProfileSchema.safeParse(input);
+    // Handle FormData from client
+    let profileData: UpdateProfileInput;
+    let imageFile: File | undefined;
+    let oldImagePubId: string | undefined;
+
+    if (input instanceof FormData) {
+      profileData = {
+        firstName: input.get("firstName") as string,
+        lastName: input.get("lastName") as string,
+        phone: (input.get("phone") as string) || undefined,
+      };
+      imageFile = (input.get("image") as File) || undefined;
+      oldImagePubId = (input.get("oldImagePubId") as string) || undefined;
+    } else {
+      profileData = input;
+    }
+
+    const validated = updateProfileSchema.safeParse(profileData);
     if (!validated.success) {
       return {
         success: false,
@@ -114,10 +170,15 @@ export async function updateProfileAction(input: UpdateProfileInput) {
       };
     }
 
-    const result = await userService.updateProfile(session.userId, validated.data);
+    const result = await userService.updateProfile(
+      session.userId,
+      validated.data,
+      imageFile,
+      oldImagePubId,
+    );
 
     if (result.success) {
-      revalidatePath("/account");
+      revalidatePath("/account-management/profile");
     }
 
     return result;
@@ -215,7 +276,7 @@ export async function updateAddressAction(
     zip: string;
     country: string;
     isDefault: boolean;
-  }>
+  }>,
 ) {
   try {
     const session = await getSession();
@@ -235,7 +296,11 @@ export async function updateAddressAction(
       };
     }
 
-    const result = await userService.updateAddress(session.userId, addressId, data);
+    const result = await userService.updateAddress(
+      session.userId,
+      addressId,
+      data,
+    );
 
     if (result.success) {
       revalidatePath("/account/addresses");
@@ -287,6 +352,40 @@ export async function deleteAddressAction(addressId: string) {
       success: false,
       error: "Failed to delete address",
       code: "DELETE_ERROR",
+    };
+  }
+}
+interface GetAllCustomersParams {
+  limit: number;
+  offset: number;
+  search: string;
+}
+
+/**
+ * Get all customers
+ */
+export async function getAllCustomersAction(
+  limit: number,
+  offset: number,
+  search: string,
+): Promise<any> {
+  try {
+    // const session = await getSession();
+    // if (!session || !("userId" in session)) {
+    //   return {
+    //     success: false,
+    //     error: "Unauthorized",
+    //     code: "UNAUTHORIZED",
+    //   };
+    // }
+
+    return await userService.getAllCustomers(limit, offset, search);
+  } catch (error) {
+    console.error("Get all customers action error:", error);
+    return {
+      success: false,
+      error: "Failed to fetch customers",
+      code: "FETCH_ERROR",
     };
   }
 }

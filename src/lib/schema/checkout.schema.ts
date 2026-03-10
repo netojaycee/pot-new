@@ -3,18 +3,18 @@ import { z } from "zod";
 // ============ ADDRESS SCHEMA ============
 export const addressSchema = z.object({
   street: z.string().min(1, "Street address required"),
-  city: z.string().min(1, "City required"),
-  state: z.string().min(1, "State required"),
+  town: z.string().min(1, "Town/City required"),
+  // state: z.string().min(1, "State required"),
   zip: z.string().min(1, "ZIP code required"),
-  country: z.string().min(1, "Country required"),
+  county: z.string().min(1, "County required"),
 });
 
 export const addAddressSchema = z.object({
   street: z.string().min(1, "Street address required"),
-  city: z.string().min(1, "City required"),
-  state: z.string().min(1, "State required"),
+  town: z.string().min(1, "Town/City required"),
+  // state: z.string().min(1, "State required"),
   zip: z.string().min(1, "ZIP code required"),
-  country: z.string().min(1, "Country required"),
+  county: z.string().min(1, "County required"),
   isDefault: z.boolean().default(false),
 });
 

@@ -6,18 +6,12 @@ import { useCartStore, CartItem } from "@/stores/cart.store";
 
 interface CartItemsSectionProps {
   items: CartItem[];
-  selectedItems: Set<string>;
-  onSelectItem: (itemId: string) => void;
-  onSelectAll: (select: boolean) => void;
   onUpdateQuantity?: (itemId: string, quantity: number) => Promise<boolean>;
   onRemoveItem?: (itemId: string) => Promise<boolean>;
 }
 
 export function CartItemsSection({
   items,
-  selectedItems,
-  onSelectItem,
-  onSelectAll,
   onUpdateQuantity,
   onRemoveItem,
 }: CartItemsSectionProps) {
@@ -56,46 +50,23 @@ export function CartItemsSection({
 
   return (
     <div className="bg-white rounded border">
-      {/* Header with Select All */}
+      {/* Header */}
       <div className="bg-[#F5F5F5] flex items-center justify-between p-3 border-b">
         <span className="flex items-center gap-2 font-semibold text-sm">
-          📦 ITEM
+          📦 ITEMS ({items.length})
         </span>
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            checked={selectedItems.size === items.length && items.length > 0}
-            onChange={(e) => onSelectAll(e.target.checked)}
-            className="w-3 h-3 rounded border-gray-300 cursor-pointer"
-          />
-          <span className="text-sm font-semibold text-gray-700">
-            Select All ({items.length})
-          </span>
-        </div>
       </div>
 
       {/* Items List */}
       <div className="space-y-3 p-2 md:p-4">
         {items.map((item) => {
-          const isSelected = selectedItems.has(item.id);
           const subtotal = item.price * item.quantity;
 
           return (
             <div
               key={item.id}
-              className={`flex gap-2 p-2 border rounded transition ${
-                isSelected
-                  ? "bg-green-50 border-green-200"
-                  : "border-gray-200 bg-[#F5F5F5]"
-              }`}
+              className="flex gap-2 p-2 border rounded border-gray-200 bg-[#F5F5F5]"
             >
-              {/* Checkbox */}
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={() => onSelectItem(item.id)}
-                className="w-3 h-3 rounded border-gray-300 cursor-pointer mt-1 shrink-0"
-              />
 
               {/* Product Image */}
               <div className="relative w-20 h-20 rounded overflow-hidden bg-gray-100 shrink-0">

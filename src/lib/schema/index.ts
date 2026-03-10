@@ -22,6 +22,13 @@ export const registerSchema = z.object({
     path: ["confirmPassword"],
 });
 
+export const updateProfileSchema = z.object({
+  firstName: z.string().min(1, "First name required"),
+  lastName: z.string().min(1, "Last name required"),
+  phone: z.string().optional(),
+  image: z.string().url().optional(),
+});
+
 
 export const sendOtpSchema = z.object({
     email: z.string().email(),
@@ -29,13 +36,15 @@ export const sendOtpSchema = z.object({
 });
 
 export const changePasswordSchema = z.object({
-    // email: z.string().email(),
-    password: z.string().min(6),
-    // resetToken: z.string(),
-    confirmPassword: z.string().min(6),
-}).refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
+  currentPassword: z.string().min(1, "Current password required"),
+  newPassword: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(6, "Confirm password required"),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+}).refine((data) => data.currentPassword !== data.newPassword, {
+  message: "New password must be different from current password",
+  path: ["newPassword"],
 });
 
 

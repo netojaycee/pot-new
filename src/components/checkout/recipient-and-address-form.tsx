@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Loader2, Phone, Mail, MapPin, Gift } from "lucide-react";
 import {
@@ -22,6 +22,8 @@ import {
 } from "@/lib/schema/checkout.schema";
 import { useCheckoutData } from "@/lib/hooks/use-checkout";
 import { checkoutAction } from "@/lib/actions/order.actions";
+import { getProfileAction } from "@/lib/actions/user.actions";
+import { getSession } from "@/lib/auth";
 
 interface RecipientAndAddressFormProps {
   onOrderCreated: (orderId: string, clientSecret: string, order?: any) => void;
@@ -47,6 +49,9 @@ export function RecipientAndAddressForm({
 }: RecipientAndAddressFormProps) {
   const checkoutData = useCheckoutData();
   const [isPending, setIsPending] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userPhone, setUserPhone] = useState<string | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   const form = useForm<FormData>({
     resolver: zodResolver(checkoutFormSchema) as any,
@@ -58,15 +63,61 @@ export function RecipientAndAddressForm({
       phone: "",
       deliveryAddress: {
         street: "",
-        city: "",
-        state: "",
+        town: "",
         zip: "",
-        country: "",
+        county: "",
       },
       occasion: "",
       specialMessage: "",
     },
   });
+
+  // Fetch user profile if logged in
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      setProfileLoading(true);
+      try {
+        // Check if user is logged in by calling getProfileAction
+        const profileResult = await getProfileAction();
+        
+        if (profileResult.success && "data" in profileResult && profileResult.data) {
+          const userData = profileResult.data;
+          setIsLoggedIn(true);
+          
+          // Pre-fill form with user data
+          form.reset({
+            email: userData.email || "",
+            firstName: userData.firstName || "",
+            lastName: userData.lastName || "",
+            phone: userData.phone || "",
+            deliveryAddress: {
+              street: "",
+              town: "",
+              zip: "",
+              county: "",
+            },
+            occasion: "",
+            specialMessage: "",
+          });
+          
+          // Store phone for conditional disable logic
+          if (userData.phone) {
+            setUserPhone(userData.phone);
+          }
+        } else {
+          // Not logged in or profile fetch failed
+          setIsLoggedIn(false);
+        }
+      } catch (error) {
+        // Not logged in
+        setIsLoggedIn(false);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [form]);
 
   async function onSubmit(data: FormData) {
     setIsPending(true);
@@ -106,7 +157,7 @@ export function RecipientAndAddressForm({
   }
 
   // Loading state
-  if (checkoutData.loading) {
+  if (checkoutData.loading || profileLoading) {
     return (
       <div className="border bg-[#f5f5f5]">
         <CardContent className="flex items-center justify-center py-8">
@@ -152,7 +203,7 @@ export function RecipientAndAddressForm({
                         type="email"
                         placeholder="your@email.com"
                         {...field}
-                        disabled={!!checkoutData.userId || isPending}
+                        disabled={isLoggedIn || isPending}
                         className="disabled:bg-gray-100"
                       />
                     </FormControl>
@@ -173,7 +224,7 @@ export function RecipientAndAddressForm({
                         <Input
                           placeholder="John"
                           {...field}
-                          disabled={isPending}
+                          disabled={isLoggedIn || isPending}
                         />
                       </FormControl>
                       <FormMessage />
@@ -191,7 +242,7 @@ export function RecipientAndAddressForm({
                         <Input
                           placeholder="Doe"
                           {...field}
-                          disabled={isPending}
+                          disabled={isLoggedIn || isPending}
                         />
                       </FormControl>
                       <FormMessage />
@@ -208,14 +259,14 @@ export function RecipientAndAddressForm({
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
                       <Phone className="h-4 w-4" />
-                      Phone Number
+                      Phone Number {isLoggedIn && userPhone ? "(from profile)" : "(Optional)"}
                     </FormLabel>
                     <FormControl>
                       <Input
                         type="tel"
                         placeholder="+1 (555) 000-0000"
                         {...field}
-                        disabled={isPending}
+                        disabled={isLoggedIn && !!userPhone || isPending}
                       />
                     </FormControl>
                     <FormMessage />
@@ -237,6 +288,67 @@ export function RecipientAndAddressForm({
               {/* Street Address */}
               <FormField
                 control={form.control}
+                name="deliveryAddress.county"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>County *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="123 Main Street"
+                        {...field}
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+             
+
+              <div className="grid grid-cols-2 gap-4">
+             
+
+                <FormField
+                  control={form.control}
+                  name="deliveryAddress.town"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Town/City *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="United States"
+                          {...field}
+                          disabled={isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                   <FormField
+                  control={form.control}
+                  name="deliveryAddress.zip"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Post Code *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="10001"
+                          {...field}
+                          disabled={isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+               {/* Street Address */}
+              <FormField
+                control={form.control}
                 name="deliveryAddress.street"
                 render={({ field }) => (
                   <FormItem>
@@ -252,83 +364,6 @@ export function RecipientAndAddressForm({
                   </FormItem>
                 )}
               />
-
-              {/* City, State, ZIP */}
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="deliveryAddress.city"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>City *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="New York"
-                          {...field}
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="deliveryAddress.state"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>State *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="NY"
-                          {...field}
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="deliveryAddress.zip"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>ZIP Code *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="10001"
-                          {...field}
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="deliveryAddress.country"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Country *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="United States"
-                          {...field}
-                          disabled={isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
             </div>
           </div>
 

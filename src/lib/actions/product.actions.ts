@@ -17,18 +17,22 @@ import { revalidatePath } from "next/cache";
  */
 export async function getProductsAction(filters?: {
   categoryId?: string;
+  category?: string;
   type?: "item" | "food" | "giftbox";
   search?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minRating?: number;
   limit?: number;
   offset?: number;
   sortBy?: "newest" | "popular" | "price_asc" | "price_desc" | "rating";
 }) {
   try {
-    const products = await productService.getProducts(filters);
-    return { success: true, data: products };
+    const result = await productService.getProducts(filters);
+    return { success: true, data: result.data, total: result.total };
   } catch (error) {
     console.error("Get products error:", error);
-    return { success: false, error: "Failed to fetch products" };
+    return { success: false, error: "Failed to fetch products", total: 0 };
   }
 }
 
@@ -186,7 +190,7 @@ export async function updateProductAction(id: string, input: UpdateProductInput)
       // Revalidate affected paths
       revalidatePath("/admin/products");
       revalidatePath("/products");
-      revalidatePath(`/product/${id}`);
+      revalidatePath(`/products/${id}`);
     }
 
     return result;

@@ -10,8 +10,7 @@ interface OrderSummaryProps {
   tax?: number;
   shipping?: number;
   total?: number;
-  selectedItemsCount: number;
-  totalItems: number;
+  itemsCount: number;
   isPromoApplied?: boolean;
   onCheckout: () => Promise<boolean>;
   isLoading?: boolean;
@@ -23,8 +22,7 @@ export function OrderSummaryCart({
   tax,
   shipping,
   total,
-  selectedItemsCount,
-  totalItems,
+  itemsCount,
   isPromoApplied = false,
   onCheckout,
   isLoading = false,
@@ -36,7 +34,7 @@ export function OrderSummaryCart({
   const calculatedShipping = shipping ?? 0; // Shipping will be calculated at checkout
   const calculatedTotal = total ?? (subtotal - discountAmount);
 
-  const canCheckout = selectedItemsCount > 0 && !isLoading;
+  const canCheckout = itemsCount > 0 && !isLoading;
 
   const handleCheckout = async () => {
     if (canCheckout) {
@@ -56,7 +54,7 @@ export function OrderSummaryCart({
       {/* Items Count */}
       <div className="text-sm text-gray-600 mb-4 pb-4 border-b">
         <p>
-          {selectedItemsCount} of {totalItems} items selected
+          {itemsCount} {itemsCount === 1 ? "item" : "items"} in cart
         </p>
       </div>
 
@@ -108,9 +106,9 @@ export function OrderSummaryCart({
         {isLoading ? "Processing..." : "Proceed to Checkout"}
       </Button>
 
-      {selectedItemsCount === 0 && (
+      {itemsCount === 0 && (
         <p className="text-sm text-red-600 mt-3 text-center">
-          Please select items to checkout
+          Your cart is empty
         </p>
       )}
 

@@ -88,10 +88,9 @@ export default function ChangePassword({
         if (isPasswordReset) {
           // Password reset flow (forgot password)
           const resetValues = values as ResetPasswordValues;
-          console.log(email, resetValues.password, resetToken)
           const result = await resetPasswordAction({
             email: email || "",
-            newPassword: resetValues.password,
+            newPassword: resetValues.newPassword,
             resetToken: resetToken,
           });
 

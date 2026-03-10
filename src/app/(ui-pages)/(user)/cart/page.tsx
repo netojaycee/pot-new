@@ -14,12 +14,13 @@ import { Skeleton } from "@/components/ui/skeleton";
  * Data Flow:
  * 1. useCart hook fetches cart from server on mount via getCartAction
  * 2. Cart data displayed from Zustand state (items)
- * 3. User interacts: select items, remove, update quantity
+ * 3. User interacts: remove, update quantity (all items included)
  * 4. Hook methods call server actions + update Zustand optimistically
  * 5. Server actions call services which update database
- * 6. OrderSummaryCart calculates totals from selected items
+ * 6. OrderSummaryCart calculates totals from ALL items (no selection)
  * 7. User applies promo code via applyPromo hook method
- * 8. User checkout via validateForCheckout hook method
+ * 8. User clicks "Proceed to Checkout" → validateForCheckout sends entire cart
+ * 9. Checkout page creates order with all cart items and payment
  */
 export default function CartPage() {
   const {
@@ -27,13 +28,7 @@ export default function CartPage() {
     totals,
     loading,
     error,
-    selectedItemIds,
     appliedPromo,
-    selectItem,
-    deselectItem,
-    toggleSelectItem,
-    selectAllItems,
-    deselectAllItems,
     updateItem,
     removeItem,
     applyPromo,
@@ -41,41 +36,25 @@ export default function CartPage() {
     refetch,
   } = useCart();
 
-  // Handle item selection toggle
-  const handleSelectItem = (itemId: string) => {
-    toggleSelectItem(itemId);
-  };
-
-  // Handle select/deselect all
-  const handleSelectAll = (select: boolean) => {
-    if (select) {
-      selectAllItems();
-    } else {
-      deselectAllItems();
-    }
-  };
-
-  // Calculate totals for selected items only
-  const selectedItems = items.filter((item) => selectedItemIds.has(item.id));
-
-  const selectedSubtotal = selectedItems.reduce(
+  // Calculate totals using all items
+  const allItemsSubtotal = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
 
-  const selectedDiscount =
-    appliedPromo && selectedSubtotal > 0
-      ? selectedSubtotal * (appliedPromo.discount / 100)
+  const allItemsDiscount =
+    appliedPromo && allItemsSubtotal > 0
+      ? allItemsSubtotal * (appliedPromo.discount / 100)
       : 0;
 
-  const selectedTax =
-    Math.round((selectedSubtotal - selectedDiscount) * 0.1 * 100) / 100;
+  const allItemsTax =
+    Math.round((allItemsSubtotal - allItemsDiscount) * 0.1 * 100) / 100;
 
-  const selectedShipping =
-    selectedSubtotal >= 50 || selectedItems.length === 0 ? 0 : 4.99;
+  const allItemsShipping =
+    allItemsSubtotal >= 50 || items.length === 0 ? 0 : 4.99;
 
-  const selectedTotal =
-    selectedSubtotal - selectedDiscount + selectedTax + selectedShipping;
+  const allItemsTotal =
+    allItemsSubtotal - allItemsDiscount + allItemsTax + allItemsShipping;
 
   // Loading state
   if (loading) {
@@ -146,9 +125,6 @@ export default function CartPage() {
             {/* Cart Items */}
             <CartItemsSection
               items={items}
-              selectedItems={selectedItemIds}
-              onSelectItem={handleSelectItem}
-              onSelectAll={handleSelectAll}
               onUpdateQuantity={updateItem}
               onRemoveItem={removeItem}
             />
@@ -157,20 +133,19 @@ export default function CartPage() {
             <PromoCodeSection
               onApplyPromo={applyPromo}
               appliedPromo={appliedPromo?.code}
-              discount={selectedDiscount}
+              discount={allItemsDiscount}
             />
           </div>
 
           {/* Right Column - Order Summary */}
           <div>
             <OrderSummaryCart
-              subtotal={selectedSubtotal}
-              discountAmount={selectedDiscount}
-              tax={selectedTax}
-              shipping={selectedShipping}
-              total={selectedTotal}
-              selectedItemsCount={selectedItems.length}
-              totalItems={items.length}
+              subtotal={allItemsSubtotal}
+              discountAmount={allItemsDiscount}
+              tax={allItemsTax}
+              shipping={allItemsShipping}
+              total={allItemsTotal}
+              itemsCount={items.length}
               isPromoApplied={appliedPromo !== null}
               onCheckout={validateForCheckout}
             />

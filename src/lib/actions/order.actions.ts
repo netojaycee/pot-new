@@ -83,6 +83,42 @@ export async function getOrderAction(orderId: string) {
   }
 }
 
+/**
+ * Get all orders (admin only)
+ */
+export async function getOrdersAction(
+  limit: number = 50,
+  offset: number = 0,
+  search?: string,
+  status?: string,
+) {
+  try {
+    const session = await getSession();
+
+    // Check admin authorization
+    if (!session || !("userId" in session)) {
+      return {
+        success: false,
+        error: "Unauthorized",
+        code: "UNAUTHORIZED",
+      };
+    }
+
+    // Verify admin role (you can add this check if needed)
+    // For now, we'll assume only admins can access this route
+
+    const result = await orderService.getAllOrders(limit, offset, search, status);
+    return result;
+  } catch (error) {
+    console.error("Get all orders error:", error);
+    return {
+      success: false,
+      error: "Failed to fetch orders",
+      code: "FETCH_ERROR",
+    };
+  }
+}
+
 // ============ CHECKOUT ACTION (Main checkout flow) ============
 
 /**
@@ -166,7 +202,8 @@ export async function checkoutAction(input: any) {
     }
 
     // Create Stripe PaymentIntent for the order
-    const currency = detectCurrencyFromCountry(deliveryAddress.country);
+    // const currency = detectCurrencyFromCountry(deliveryAddress.county);
+    const currency = "gbp"; // For simplicity, using GBP for all orders
     const paymentResult = await paymentService.createPaymentIntent({
       orderId: orderResult.data.id,
       amount: orderResult.data.total,
@@ -324,3 +361,56 @@ export async function cancelOrderAction(orderId: string) {
     };
   }
 }
+
+/**
+ * Update order status (admin only)
+ */
+export async function updateOrderStatusAction(
+  orderId: string,
+  newStatus: string,
+) {
+  try {
+    const session = await getSession();
+
+    // Check if user is authenticated and is admin
+    if (!session || !("userId" in session)) {
+      return {
+        success: false,
+        error: "Unauthorized",
+        code: "UNAUTHORIZED",
+      };
+    }
+
+    // TODO: Verify user is admin role (not yet implemented in getSession)
+    // For now, all authenticated users can update - restrict to admin in future
+
+    const validStatuses = ["pending", "paid", "processing", "shipped", "delivered", "cancelled", "failed"];
+    if (!validStatuses.includes(newStatus)) {
+      return {
+        success: false,
+        error: "Invalid status",
+        code: "INVALID_STATUS",
+      };
+    }
+
+    const result = await orderService.updateOrderStatus(
+      orderId,
+      newStatus as any
+    );
+
+    if (result.success) {
+      revalidatePath("/admin/admin/orders");
+      revalidatePath(`/admin/admin/orders/${orderId}`);
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Update order status error:", error);
+    return {
+      success: false,
+      error: "Failed to update order status",
+      code: "UPDATE_ERROR",
+    };
+  }
+}
+

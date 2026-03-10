@@ -67,7 +67,7 @@ export async function updateProductAction(
   const result = await updateProduct(productId, input);
   if (result.success) {
     revalidatePath("/admin/products");
-    revalidatePath(`/product/${productId}`);
+    revalidatePath(`/products/${productId}`);
     revalidatePath("/products");
   }
   return result;

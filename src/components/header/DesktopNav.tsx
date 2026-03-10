@@ -5,7 +5,8 @@ import { navLinks } from "./navLinks";
 export default async function DesktopNav() {
   // Fetch giftbox categories dynamically
   const result = await getCategoriesAction({ type: "giftbox", limit: 8 });
-  const categories = result.success ? result.data : navLinks;
+  const categories = result.success ? result.data : []; // Fallback to static links if API fails
+  // console.log(categories, "fff")
 
   return (
     <div className="hidden lg:flex items-center justify-between mt-2">
@@ -14,12 +15,12 @@ export default async function DesktopNav() {
         <p>|</p>
 
         {/* Gift Packages Link - All Categories */}
-        <Link
+        {/* <Link
           className="text-sm font-normal transition-all hover:text-primary duration-300 hover:scale-105"
           href="/categories"
         >
           Gift Packages
-        </Link>
+        </Link> */}
 
         {/* Separator between gift packages and categories */}
         {/* {categories && categories.length > 0 && <p>|</p>} */}
@@ -30,9 +31,9 @@ export default async function DesktopNav() {
             <Link
               key={category.id}
               className="text-sm font-normal transition-all hover:text-primary duration-300 hover:scale-105"
-              href={`/category/${category.type}/${category.slug}`}
+              href={`/products/${category.slug}`}
             >
-              {category.name || category.title}
+              {category.name}
             </Link>
           ))}
       </div>

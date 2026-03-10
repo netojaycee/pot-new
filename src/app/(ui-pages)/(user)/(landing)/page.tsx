@@ -29,7 +29,7 @@ export default function Home() {
       />
 
       {/* Gift for Her Section */}
-      <GiftForHerSection />
+      {/* <GiftForHerSection /> */}
 
       {/* Essentials Section */}
       <EssentialsSection />

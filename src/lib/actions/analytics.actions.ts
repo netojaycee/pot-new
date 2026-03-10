@@ -5,6 +5,7 @@ import {
   getProductAnalytics,
   getUserAnalytics,
   getDashboardOverview,
+  getComprehensiveAnalytics,
 } from "@/lib/services/analytics.service";
 
 // ============ ANALYTICS ACTIONS ============
@@ -23,4 +24,8 @@ export async function getUserAnalyticsAction() {
 
 export async function getDashboardOverviewAction(startDate: Date, endDate: Date) {
   return await getDashboardOverview(startDate, endDate);
+}
+
+export async function getAnalyticsAction() {
+  return await getComprehensiveAnalytics();
 }

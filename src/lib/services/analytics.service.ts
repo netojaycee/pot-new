@@ -364,3 +364,130 @@ export async function getDashboardOverview(startDate: Date, endDate: Date): Prom
     };
   }
 }
+
+/**
+ * Get comprehensive analytics for dashboard
+ */
+export async function getComprehensiveAnalytics(): Promise<
+  AnalyticsServiceResult<{
+    totalRevenue: number;
+    totalOrders: number;
+    totalProducts: number;
+    totalCustomers: number;
+    revenueChange: number;
+    ordersChange: number;
+    topProducts: Array<{ name: string; sales: number; revenue: number }>;
+    recentOrders: Array<{
+      id: string;
+      orderNumber: string;
+      total: number;
+      status: string;
+      createdAt: string;
+    }>;
+  }>
+> {
+  try {
+    const cacheKey = "analytics:comprehensive:dashboard";
+    const cached = await redis.get(cacheKey);
+    if (cached && typeof cached === 'string') {
+      return { success: true, data: JSON.parse(cached) };
+    }
+
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Get current month stats
+    const currentOrders = await prisma.order.findMany({
+      where: {
+        createdAt: { gte: currentMonth, lte: now },
+        status: { in: ["paid", "shipped", "delivered"] },
+      },
+      select: { id: true, total: true, orderNumber: true, status: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+
+    const currentRevenue = currentOrders.reduce((sum, order) => sum + order.total, 0);
+
+    // Get previous month stats for comparison
+    const previousOrders = await prisma.order.findMany({
+      where: {
+        createdAt: { gte: lastMonth, lt: currentMonth },
+        status: { in: ["paid", "shipped", "delivered"] },
+      },
+      select: { total: true },
+    });
+
+    const previousRevenue = previousOrders.reduce((sum, order) => sum + order.total, 0);
+
+    // Calculate changes
+    const revenueChange = previousRevenue > 0 
+      ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
+      : 100;
+    
+    const ordersChange = previousOrders.length > 0
+      ? ((currentOrders.length - previousOrders.length) / previousOrders.length) * 100
+      : 100;
+
+    // Get total counts
+    const [totalOrders, totalProducts, totalCustomers] = await Promise.all([
+      prisma.order.count(),
+      prisma.product.count(),
+      prisma.user.count({ where: { role: "user" } }),
+    ]);
+
+    // Get top products by sales
+    const topProductsByQuantity = await prisma.orderItem.groupBy({
+      by: ["productId"],
+      _sum: { quantity: true, price: true },
+      orderBy: { _sum: { quantity: "desc" } },
+      take: 5,
+    });
+
+    const productDetails = await prisma.product.findMany({
+      where: {
+        id: { in: topProductsByQuantity.map((p) => p.productId) },
+      },
+      select: { id: true, name: true },
+    });
+
+    const topProducts = topProductsByQuantity.map((tp) => {
+      const product = productDetails.find((p) => p.id === tp.productId);
+      return {
+        name: product?.name || "Unknown",
+        sales: tp._sum.quantity || 0,
+        revenue: tp._sum.price || 0,
+      };
+    });
+
+    const result = {
+      totalRevenue: currentRevenue,
+      totalOrders,
+      totalProducts,
+      totalCustomers,
+      revenueChange: Math.round(revenueChange),
+      ordersChange: Math.round(ordersChange),
+      topProducts,
+      recentOrders: currentOrders.map((order) => ({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        total: order.total,
+        status: order.status,
+        createdAt: order.createdAt.toISOString(),
+      })),
+    };
+
+    // Cache for 1 hour
+    await redis.setex(cacheKey, 3600, JSON.stringify(result));
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Get comprehensive analytics error:", error);
+    return {
+      success: false,
+      error: "Failed to fetch comprehensive analytics",
+      code: "FETCH_ERROR",
+    };
+  }
+}
