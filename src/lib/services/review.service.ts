@@ -154,6 +154,39 @@ export const reviewService = {
   // ============ WRITE OPERATIONS ============
 
   /**
+   * Get products the user has ordered but not yet reviewed (for review reminders)
+   */
+  async getUnreviewedDeliveredProducts(userId: string): Promise<any[]> {
+    const items = await prisma.orderItem.findMany({
+      where: {
+        order: {
+          userId,
+          status: { in: ["delivered", "paid", "processing", "shipped"] },
+        },
+        product: {
+          reviews: { none: { userId } },
+        },
+      },
+      include: {
+        product: {
+          select: { id: true, name: true, images: true, slug: true, type: true },
+        },
+        order: { select: { id: true, orderNumber: true, status: true } },
+      },
+      distinct: ["productId"],
+      orderBy: { order: { createdAt: "desc" } },
+      take: 5,
+    });
+
+    return items.map((item) => ({
+      product: item.product,
+      orderNumber: item.order.orderNumber,
+      orderId: item.order.id,
+      orderStatus: item.order.status,
+    }));
+  },
+
+  /**
    * Create a review
    */
   async createReview(data: CreateReviewInput): Promise<ReviewResult<any>> {
@@ -173,6 +206,25 @@ export const reviewService = {
           success: false,
           error: "You have already reviewed this product",
           code: "REVIEW_EXISTS",
+        };
+      }
+
+      // Verify user has actually ordered this product
+      const hasPurchased = await prisma.orderItem.findFirst({
+        where: {
+          productId: validated.productId,
+          order: {
+            userId: validated.userId,
+            status: { in: ["paid", "processing", "shipped", "delivered"] },
+          },
+        },
+      });
+
+      if (!hasPurchased) {
+        return {
+          success: false,
+          error: "You can only review products you have ordered",
+          code: "NOT_PURCHASED",
         };
       }
 

@@ -1,5 +1,6 @@
 import Footer from "@/components/footer/Footer";
 import Header from "@/components/header/Header";
+import { ReviewReminderModal } from "@/components/product/ReviewReminderModal";
 
 export default function UserLayout({
   children,
@@ -7,13 +8,13 @@ export default function UserLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen max-w-7xl mx-auto w-full">
       <Header />
-      {/* p-4 md:px-16 md:py-8 */}
-      <main className="flex-1 max-w-7xl mx-auto w-full">
+      <main className="flex-1">
         {children}
       </main>
       <Footer />
+      <ReviewReminderModal />
     </div>
   );
 }

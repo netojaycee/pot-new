@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -12,6 +12,12 @@ import {
   OtpType,
 } from "@/lib/services/auth.service";
 import { encrypt, decrypt, getSession } from "@/lib/auth";
+import {
+  loginRateLimit,
+  otpRequestRateLimit,
+  otpVerifyRateLimit,
+  registerRateLimit,
+} from "@/lib/rate-limit";
 
 const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME!;
 
@@ -61,6 +67,13 @@ export async function registerAction(input: RegisterInput): Promise<{
   userId?: string;
 }> {
   try {
+    const headerStore = await headers();
+    const ip = headerStore.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+    const rl = await registerRateLimit(ip);
+    if (!rl.success) {
+      return { success: false, error: rl.error, code: "RATE_LIMITED" };
+    }
+
     const result = await authService.register(input);
 
     if (!result.success) {
@@ -149,6 +162,11 @@ export async function loginAction(input: LoginInput): Promise<{
   email?: string;
 }> {
   try {
+    const rl = await loginRateLimit(input.email);
+    if (!rl.success) {
+      return { success: false, error: rl.error, code: "RATE_LIMITED" };
+    }
+
     const result = await authService.login(input);
 
     if (!result.success) {

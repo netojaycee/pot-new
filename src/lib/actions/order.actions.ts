@@ -6,7 +6,7 @@ import { getSession } from "@/lib/auth";
 import { orderService, CreateOrderInput } from "@/lib/services/order.service";
 import { cartService } from "@/lib/services/cart.service";
 import { paymentService } from "@/lib/services/payment.service";
-import { checkoutFormSchema } from "@/lib/schema/checkout.schema";
+import { checkoutFormSchema, type CheckoutFormInput } from "@/lib/schema/checkout.schema";
 
 // ============ HELPERS ============
 
@@ -126,7 +126,7 @@ export async function getOrdersAction(
  * Validates recipient info and address, creates order with cart items
  * Returns orderId and clientSecret for Stripe payment
  */
-export async function checkoutAction(input: any) {
+export async function checkoutAction(input: CheckoutFormInput) {
   try {
     // Validate input with checkout schema
     const validated = checkoutFormSchema.safeParse(input);
@@ -372,7 +372,6 @@ export async function updateOrderStatusAction(
   try {
     const session = await getSession();
 
-    // Check if user is authenticated and is admin
     if (!session || !("userId" in session)) {
       return {
         success: false,
@@ -381,8 +380,20 @@ export async function updateOrderStatusAction(
       };
     }
 
-    // TODO: Verify user is admin role (not yet implemented in getSession)
-    // For now, all authenticated users can update - restrict to admin in future
+    // Enforce admin role
+    const { prisma } = await import("@/lib/db");
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { role: true },
+    });
+
+    if (!user || user.role !== "admin") {
+      return {
+        success: false,
+        error: "Forbidden: admin access required",
+        code: "FORBIDDEN",
+      };
+    }
 
     const validStatuses = ["pending", "paid", "processing", "shipped", "delivered", "cancelled", "failed"];
     if (!validStatuses.includes(newStatus)) {
@@ -399,8 +410,8 @@ export async function updateOrderStatusAction(
     );
 
     if (result.success) {
-      revalidatePath("/admin/admin/orders");
-      revalidatePath(`/admin/admin/orders/${orderId}`);
+      revalidatePath("/admin/orders");
+      revalidatePath(`/admin/orders/${orderId}`);
     }
 
     return result;

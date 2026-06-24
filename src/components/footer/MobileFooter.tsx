@@ -10,7 +10,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Instagram, Facebook, Twitter, Linkedin } from "lucide-react";
+import { Instagram, Facebook } from "lucide-react";
 import Logo from "../Logo";
 import {
   contactInfoItems,
@@ -107,7 +107,7 @@ export default function MobileFooter() {
           <p className="text-sm font-semibold uppercase mb-3">Follow Us:</p>
           <div className="flex gap-4">
             <a
-              href="https://instagram.com"
+              href="https://www.instagram.com/placeoftreasure_?igsh=emdqcmtjYmEwNzdp"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram"
@@ -115,28 +115,12 @@ export default function MobileFooter() {
               <Instagram className="w-6 h-6 hover:text-primary transition-colors" />
             </a>
             <a
-              href="https://facebook.com"
+              href="https://www.facebook.com/share/1DjTf1RYkt/?mibextid=wwXIfr"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Facebook"
             >
               <Facebook className="w-6 h-6 hover:text-primary transition-colors" />
-            </a>
-            <a
-              href="https://twitter.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Twitter"
-            >
-              <Twitter className="w-6 h-6 hover:text-primary transition-colors" />
-            </a>
-            <a
-              href="https://linkedin.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="LinkedIn"
-            >
-              <Linkedin className="w-6 h-6 hover:text-primary transition-colors" />
             </a>
           </div>
         </div>

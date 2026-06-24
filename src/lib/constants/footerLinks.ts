@@ -18,7 +18,7 @@ export const customerServiceLinks: FooterLink[] = [
 ];
 
 export const contactInfoItems: string[] = [
-    "123 Maple Lane London SE1 4TY United Kingdom",
-    "+44 20 1234 5678",
-    "info@yourdomain.com",
+    "United Kingdom",
+    "07832 813934",
+    "info@placeoftreasure.co.uk",
 ];

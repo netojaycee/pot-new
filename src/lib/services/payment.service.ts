@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/db";
 import Stripe from "stripe";
 import { z } from "zod";
+import {
+  sendOrderConfirmationEmail,
+  sendOrderStatusEmail,
+  sendAdminNewOrderEmail,
+} from "@/lib/email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -216,8 +221,69 @@ export const paymentService = {
       const order = await prisma.order.update({
         where: { id: orderId },
         data: { status: "paid" },
-        include: { items: { include: { product: true } }, payment: true },
+        include: {
+          items: { include: { product: true } },
+          payment: true,
+          user: { select: { email: true } },
+          promoCode: { select: { code: true } },
+        },
       });
+
+      // Fire emails non-blocking
+      const recipientEmail = order.email || order.user?.email;
+      const deliveryAddr = order.deliveryAddress as {
+        street: string;
+        town: string;
+        county: string;
+        zip: string;
+      } | null;
+
+      const emailItems = order.items.map((item: any) => ({
+        name: item.product.name,
+        quantity: item.quantity,
+        price: item.price,
+      }));
+
+      if (recipientEmail && deliveryAddr) {
+        sendOrderConfirmationEmail(recipientEmail, {
+          firstName: order.firstName || "Customer",
+          orderNumber: order.orderNumber,
+          orderId: order.id,
+          items: emailItems,
+          subtotal: order.subtotal,
+          discountAmount: order.discountAmount ?? 0,
+          tax: order.tax,
+          shippingFee: order.shippingFee ?? 0,
+          total: order.total,
+          deliveryAddress: deliveryAddr,
+          occasion: order.occasion || undefined,
+          specialMessage: order.specialMessage || undefined,
+          promoCode: order.promoCode?.code,
+        }).catch((e) => console.error("[Email] Order confirmation failed:", e));
+      }
+
+      sendAdminNewOrderEmail({
+        orderNumber: order.orderNumber,
+        orderId: order.id,
+        customerName:
+          `${order.firstName} ${order.lastName}`.trim() || "Guest",
+        customerEmail: recipientEmail || "unknown",
+        items: emailItems,
+        subtotal: order.subtotal,
+        discountAmount: order.discountAmount ?? 0,
+        tax: order.tax,
+        shippingFee: order.shippingFee ?? 0,
+        total: order.total,
+        deliveryAddress: deliveryAddr || {
+          street: "",
+          town: "",
+          county: "",
+          zip: "",
+        },
+        occasion: order.occasion || undefined,
+        specialMessage: order.specialMessage || undefined,
+        isGuest: !order.userId,
+      }).catch((e) => console.error("[Email] Admin new order alert failed:", e));
 
       return { success: true, data: { order, payment } };
     } catch (error) {
@@ -259,8 +325,23 @@ export const paymentService = {
       const order = await prisma.order.update({
         where: { id: orderId },
         data: { status: "failed" },
-        include: { items: { include: { product: true } }, payment: true },
+        include: {
+          items: { include: { product: true } },
+          payment: true,
+          user: { select: { email: true } },
+        },
       });
+
+      // Notify customer of failure
+      const recipientEmail = order.email || order.user?.email;
+      if (recipientEmail) {
+        sendOrderStatusEmail(recipientEmail, {
+          firstName: order.firstName || "Customer",
+          orderNumber: order.orderNumber,
+          newStatus: "failed",
+          total: order.total,
+        }).catch((e) => console.error("[Email] Payment failed email failed:", e));
+      }
 
       return { success: true, data: { payment, order } };
     } catch (error) {

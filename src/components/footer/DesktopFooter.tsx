@@ -4,13 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Instagram,
-  Facebook,
-  Twitter,
-  Linkedin,
-  ChevronRight,
-} from "lucide-react";
+import { Instagram, Facebook } from "lucide-react";
 import {
   contactInfoItems,
   customerServiceLinks,
@@ -125,7 +119,7 @@ export default function DesktopFooter() {
             <p className="text-sm font-semibold mb-3">FOLLOW US:</p>
             <div className="flex gap-3 justify-end">
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/placeoftreasure_?igsh=emdqcmtjYmEwNzdp"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
@@ -133,28 +127,12 @@ export default function DesktopFooter() {
                 <Instagram className="w-6 h-6 hover:text-primary transition-colors" />
               </a>
               <a
-                href="https://facebook.com"
+                href="https://www.facebook.com/share/1DjTf1RYkt/?mibextid=wwXIfr"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Facebook"
               >
                 <Facebook className="w-6 h-6 hover:text-primary transition-colors" />
-              </a>
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Twitter"
-              >
-                <Twitter className="w-6 h-6 hover:text-primary transition-colors" />
-              </a>
-              <a
-                href="https://linkedin.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="w-6 h-6 hover:text-primary transition-colors" />
               </a>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { redis } from "@/lib/redis";
 import { z } from "zod";
+import { sendOrderStatusEmail } from "@/lib/email";
 
 const CACHE_TTL = 1800; // 30 minutes for orders
 
@@ -438,12 +439,28 @@ export const orderService = {
         include: {
           items: { include: { product: true } },
           payment: true,
+          user: { select: { email: true } },
         },
       });
 
       // Invalidate cache
       if (order.userId) {
         await invalidateOrderCache(order.userId);
+      }
+
+      // Email customer on meaningful status transitions
+      const notifyStatuses = ["processing", "shipped", "delivered", "cancelled", "failed"] as const;
+      type NotifyStatus = typeof notifyStatuses[number];
+      if (notifyStatuses.includes(status as NotifyStatus)) {
+        const recipientEmail = updated.email || updated.user?.email;
+        if (recipientEmail) {
+          sendOrderStatusEmail(recipientEmail, {
+            firstName: updated.firstName || "Customer",
+            orderNumber: updated.orderNumber,
+            newStatus: status as NotifyStatus,
+            total: updated.total,
+          }).catch((e) => console.error("[Email] Status update email failed:", e));
+        }
       }
 
       return { success: true, data: updated };

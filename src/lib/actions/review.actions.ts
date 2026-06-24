@@ -47,6 +47,24 @@ export async function hasReviewedProductAction(productId: string) {
   }
 }
 
+/**
+ * Get products the logged-in user has ordered but not reviewed yet
+ */
+export async function getUnreviewedProductsAction() {
+  try {
+    const session = await getSession();
+    if (!session || !("userId" in session)) {
+      return { success: true, data: [] };
+    }
+
+    const items = await reviewService.getUnreviewedDeliveredProducts(session.userId);
+    return { success: true, data: items };
+  } catch (error) {
+    console.error("Get unreviewed products error:", error);
+    return { success: false, error: "Failed to fetch", data: [] };
+  }
+}
+
 // ============ USER WRITE ACTIONS ============
 
 /**

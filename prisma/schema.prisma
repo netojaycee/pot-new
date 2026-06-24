@@ -1,10 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "./generated"
+  provider        = "prisma-client-js"
+  output          = "./generated"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  extensions = [vector]
 }
 
 enum Role {
@@ -92,6 +94,9 @@ model Product {
   whyChoose          String[]    // ["Reason 1", "Reason 2", ...]
   deliveryInfo       Json? // { title: string, details: string[] }
 
+  // Vector embedding for semantic search (OpenAI text-embedding-3-small = 1536 dims)
+  embedding Unsupported("vector(1536)")?
+
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
 
@@ -101,8 +106,8 @@ model Product {
   reviews           Review[]
   giftBoxComponents GiftBoxItem[]  @relation("GiftBoxComponents")
   componentsInBox   GiftBoxItem[]  @relation("ComponentInGiftBox")
-
-  recentViews RecentView[]
+  recentViews       RecentView[]
+  userEvents        UserEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -283,7 +288,15 @@ model RecentView {
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   viewedAt  DateTime @default(now())
+  // Time spent on the product page in seconds (null if not measured)
+  duration  Int?
+  // Where the user came from: search, category, recommendation, direct, wishlist
+  source    String?
   user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId, viewedAt(sort: Desc)])
+  @@index([sessionId, viewedAt(sort: Desc)])
+  @@index([productId])
 }
 
 model SearchHistory {
@@ -291,8 +304,46 @@ model SearchHistory {
   userId     String?
   sessionId  String?
   query      String
+  // How many results were returned for this query
+  resultCount Int?
   searchedAt DateTime @default(now())
   user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId, searchedAt(sort: Desc)])
+}
+
+enum EventType {
+  view
+  search
+  cart_add
+  cart_remove
+  wishlist_add
+  wishlist_remove
+  checkout_start
+  purchase
+  review_submit
+}
+
+// Comprehensive activity log used to power product recommendations.
+// Complements RecentView (detailed page views) and SearchHistory (queries).
+// Drives "customers who viewed this also viewed" and "frequently bought together".
+model UserEvent {
+  id        String    @id @default(cuid())
+  userId    String?
+  sessionId String?
+  type      EventType
+  productId String?
+  product   Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  // Flexible payload: { query, source, quantity, orderId, fromProductId, … }
+  metadata  Json?
+  createdAt DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([productId, type])
+  @@index([sessionId, createdAt(sort: Desc)])
 }
 
 model Notification {

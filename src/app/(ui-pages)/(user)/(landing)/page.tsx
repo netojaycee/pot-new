@@ -7,7 +7,7 @@ import { GiftForHerSection } from "@/components/landing/GiftForHerSection";
 import { EssentialsSection } from "@/components/landing/EssentialsSection";
 import { InspirationSection } from "@/components/landing/InspirationSection";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300; // Revalidate every 5 minutes (ISR)
 
 export default function Home() {
   return (

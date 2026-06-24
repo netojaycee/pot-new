@@ -201,13 +201,21 @@ export async function markNotificationAsRead(
   userId: string
 ): Promise<NotificationServiceResult<any>> {
   try {
-    const notification = await prisma.notification.update({
+    // Verify ownership before updating
+    const existing = await prisma.notification.findUnique({
       where: { id: notificationId },
-      data: { isRead: true, readAt: new Date() },
+      select: { userId: true },
     });
 
-    // Verify ownership
-    if (notification.userId !== userId) {
+    if (!existing) {
+      return {
+        success: false,
+        error: "Notification not found",
+        code: "NOT_FOUND",
+      };
+    }
+
+    if (existing.userId !== userId) {
       return {
         success: false,
         error: "Unauthorized",
@@ -215,7 +223,11 @@ export async function markNotificationAsRead(
       };
     }
 
-    // Invalidate caches
+    const notification = await prisma.notification.update({
+      where: { id: notificationId },
+      data: { isRead: true, readAt: new Date() },
+    });
+
     await redis.del(`notifications:unread_count:${userId}`);
 
     return { success: true, data: notification };

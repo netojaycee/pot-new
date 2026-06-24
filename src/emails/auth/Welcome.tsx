@@ -1,96 +1,72 @@
-import {
-  Html,
-  Head,
-  Preview,
-  Body,
-  Container,
-  Text,
-  Link,
-  Heading,
-  Section,
-  Hr,
-} from "@react-email/components";
-
+import { Section, Text, Link } from "@react-email/components";
+import EmailLayout from "../BaseEmail";
+import { headingStyle, textStyle, buttonStyle, cardStyle, hrStyle } from "../BaseEmail";
 
 interface WelcomeEmailProps {
   firstName: string;
 }
 
+const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL || "https://placeoftreasure.co.uk";
+
 export default function WelcomeEmail({ firstName }: WelcomeEmailProps) {
   return (
-    <Html>
-      <Head />
-      <Preview>Welcome to Place of Treasure</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={h1}>Welcome, {firstName}!</Heading>
-          <Text style={text}>
-            Thanks for joining Place of Treasure. We&apos;re excited to have you on board!
-          </Text>
-          <Section style={btnContainer}>
-            <Link style={button} href={process.env.NEXT_PUBLIC_APP_URL!}>
-              Start Shopping
-            </Link>
-          </Section>
-          <Hr style={hr} />
-          <Text style={footer}>
-            If you have any questions, feel free to reply to this email.
-          </Text>
-        </Container>
-      </Body>
-    </Html>
+    <EmailLayout
+      preview={`Welcome to Place of Treasure, ${firstName}! 🎁`}
+      yellowStripText="Your journey to meaningful gifting starts here ✨"
+    >
+      <Text style={headingStyle}>Welcome, {firstName}! 🎉</Text>
+
+      <Text style={textStyle}>
+        We&apos;re thrilled to have you join the Place of Treasure family.
+        Whether you&apos;re shopping for a birthday, anniversary, or just
+        because — you&apos;ve come to the right place.
+      </Text>
+
+      <Section style={cardStyle}>
+        <Text
+          style={{ ...textStyle, fontWeight: "bold", margin: "0 0 12px 0" }}
+        >
+          What you can do with your account:
+        </Text>
+        <Text style={{ ...textStyle, margin: "0 0 6px 0" }}>
+          🛍️ Browse curated gift boxes and collections
+        </Text>
+        <Text style={{ ...textStyle, margin: "0 0 6px 0" }}>
+          ❤️ Save items to your wishlist
+        </Text>
+        <Text style={{ ...textStyle, margin: "0 0 6px 0" }}>
+          📦 Track your orders in real-time
+        </Text>
+        <Text style={{ ...textStyle, margin: "0" }}>
+          🎀 Add personalised messages to any gift
+        </Text>
+      </Section>
+
+      <Section style={{ textAlign: "center", margin: "28px 0" }}>
+        <Link href={APP_URL} style={buttonStyle}>
+          Start Shopping Now
+        </Link>
+      </Section>
+
+      <Text
+        style={{
+          ...textStyle,
+          fontSize: "14px",
+          color: "#555555",
+          textAlign: "center",
+          margin: "0",
+        }}
+      >
+        Questions? We&apos;re always here —{" "}
+        <Link
+          href={`${APP_URL}/contact-us`}
+          style={{ color: "#0D9488", textDecoration: "none" }}
+        >
+          get in touch
+        </Link>
+        .
+      </Text>
+    </EmailLayout>
   );
 }
-
-const main = {
-  backgroundColor: "#ffffff",
-  fontFamily:
-    '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif',
-};
-
-const container = {
-  margin: "0 auto",
-  padding: "20px 0 48px",
-  maxWidth: "560px",
-};
-
-const h1 = {
-  fontSize: "24px",
-  fontWeight: "600",
-  lineHeight: "1.1",
-  color: "#484848",
-};
-
-const text = {
-  fontSize: "16px",
-  lineHeight: "1.4",
-  color: "#484848",
-};
-
-const btnContainer = {
-  textAlign: "center" as const,
-  marginTop: "32px",
-  marginBottom: "32px",
-};
-
-const button = {
-  backgroundColor: "#000000",
-  borderRadius: "5px",
-  color: "#fff",
-  fontSize: "16px",
-  fontWeight: "bold",
-  textDecoration: "none",
-  textAlign: "center" as const,
-  display: "block",
-  padding: "12px",
-};
-
-const hr = {
-  borderColor: "#cccccc",
-  margin: "20px 0",
-};
-
-const footer = {
-  color: "#8898aa",
-  fontSize: "12px",
-};
