@@ -35,13 +35,13 @@ model User {
   firstName        String
   lastName         String
   email            String  @unique
-  phone           String? @unique
+  phone            String? @unique
   password         String?
   role             Role    @default(user)
   verificationCode String?
   verified         Boolean @default(false)
   googleId         String? @unique
-  image            Json?  // { url: string, pubId: string }
+  image            Json? // { url: string, pubId: string }
 
   orders        Order[]
   cart          Cart?
@@ -53,7 +53,8 @@ model User {
   recentViews   RecentView[]
   searchHistory SearchHistory[]
   notifications Notification[]
-  returns       Return[]          @relation("UserReturns")
+  returns       Return[]        @relation("UserReturns")
+  userEvents    UserEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -89,9 +90,9 @@ model Product {
   discountExpiry     DateTime?
   tags               String[]
   images             Json[] // array of { url: string, pubId: string }
-  whatIncluded       String[]    // ["Item 1", "Item 2", ...]
-  perfectFor         String[]    // ["Occasion 1", "Occasion 2", ...]
-  whyChoose          String[]    // ["Reason 1", "Reason 2", ...]
+  whatIncluded       String[] // ["Item 1", "Item 2", ...]
+  perfectFor         String[] // ["Occasion 1", "Occasion 2", ...]
+  whyChoose          String[] // ["Reason 1", "Reason 2", ...]
   deliveryInfo       Json? // { title: string, details: string[] }
 
   // Vector embedding for semantic search (OpenAI text-embedding-3-small = 1536 dims)
@@ -300,14 +301,14 @@ model RecentView {
 }
 
 model SearchHistory {
-  id         String   @id @default(cuid())
-  userId     String?
-  sessionId  String?
-  query      String
+  id          String   @id @default(cuid())
+  userId      String?
+  sessionId   String?
+  query       String
   // How many results were returned for this query
   resultCount Int?
-  searchedAt DateTime @default(now())
-  user       User?    @relation(fields: [userId], references: [id])
+  searchedAt  DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id])
 
   @@index([userId, searchedAt(sort: Desc)])
 }
@@ -347,36 +348,36 @@ model UserEvent {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String   // order_update, payment_received, review_approved, admin_alert, system
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // order_update, payment_received, review_approved, admin_alert, system
   title     String
   body      String
-  data      Json?    // additional data payload
+  data      Json? // additional data payload
   actionUrl String?
   icon      String?
-  isRead    Boolean  @default(false)
+  isRead    Boolean   @default(false)
   readAt    DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Return {
-  id               String   @id @default(cuid())
-  orderId          String
-  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  userId           String
-  user             User     @relation("UserReturns", fields: [userId], references: [id], onDelete: Cascade)
-  reason           String
-  items            Json     // array of { productId, quantity, price }
-  refundAmount     Float
-  status           String   @default("requested") // requested, approved, rejected, processed
-  rejectionReason  String?
-  refundId         String?  // Stripe refund ID
-  approvedAt       DateTime?
-  rejectedAt       DateTime?
-  refundedAt       DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String    @id @default(cuid())
+  orderId         String
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User      @relation("UserReturns", fields: [userId], references: [id], onDelete: Cascade)
+  reason          String
+  items           Json // array of { productId, quantity, price }
+  refundAmount    Float
+  status          String    @default("requested") // requested, approved, rejected, processed
+  rejectionReason String?
+  refundId        String? // Stripe refund ID
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  refundedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
