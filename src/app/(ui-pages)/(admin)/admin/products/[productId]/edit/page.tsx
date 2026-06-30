@@ -24,8 +24,11 @@ interface Product {
   availableQuantity: number;
   categoryId: string;
   type: "item" | "food" | "giftbox";
-  sku?: string;
-  lowStockThreshold?: number;
+  images?: Array<{ url: string; pubId: string }>;
+  whatIncluded?: string[];
+  perfectFor?: string[];
+  whyChoose?: string[];
+  deliveryInfo?: { title: string; details: string[] } | null;
 }
 
 export default function EditProductPage() {
@@ -39,7 +42,6 @@ export default function EditProductPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { getCategoryAction } = await import("@/lib/actions/category.actions");
         const { getCategoriesAction } = await import("@/lib/actions/category.actions");
         const { getProductAction } = await import("@/lib/actions/product.actions");
 
@@ -68,17 +70,21 @@ export default function EditProductPage() {
   }, [productId]);
 
   const handleSubmit = async (data: any) => {
-    try {
-      // TODO: Call updateProductAction(productId, data)
-      // const result = await updateProductAction(productId, data);
-      // if (!result.success) {
-      //   throw new Error(result.error);
-      // }
-      console.log("Updating product:", productId, data);
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
+    const { updateProductAction } = await import("@/lib/actions/product.actions");
+    const result = await updateProductAction(productId, {
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      availableQuantity: data.availableQuantity,
+      categoryId: data.categoryId,
+      type: data.type,
+      images: data.images,
+      whatIncluded: data.whatIncluded,
+      perfectFor: data.perfectFor,
+      whyChoose: data.whyChoose,
+      deliveryInfo: data.deliveryInfo,
+    });
+    if (!result.success) throw new Error(result.error);
   };
 
   return (

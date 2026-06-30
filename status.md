@@ -88,10 +88,9 @@
 ---
 
 ### OPT-004 — Print and Send Email buttons commented out in admin order detail
-- **File:** `src/app/(ui-pages)/(admin)/admin/orders/[orderId]/page.tsx:206-215`
-- **Issue:** Print and "Send Email" buttons are commented out. Admin has no way to resend order confirmation.
-- **Fix needed:** Implement print (use `window.print()` + print CSS) and manual resend email action.
-- **Status:** ⏳ Open
+- **File:** `src/app/(ui-pages)/(admin)/admin/orders/[orderId]/page.tsx`
+- **Status:** ✅ Fixed 2026-06-30
+- Print button calls `window.print()`. Send Email button calls `resendOrderConfirmationAction` (added to `order.actions.ts`) which fetches the order and fires `sendOrderConfirmationEmail`.
 
 ---
 
@@ -192,6 +191,31 @@
 
 ### SEC-004 — `checkoutAction(input: any)` — unsafe type ✅ Fixed
 - Changed to `checkoutAction(input: CheckoutFormInput)` using the Zod schema type.
+
+---
+
+## 🟡 Admin Dashboard Fixes — 2026-06-30
+
+### ADMIN-001 — Wrong back links in order detail page ✅ Fixed
+- `href="/admin/admin/orders"` → `href="/admin/orders"` (route group `(admin)` is not part of the URL).
+
+### ADMIN-002 — Promo codes page not fetching data ✅ Fixed
+- `fetchPromoCodes` was a stub with a TODO comment. Now calls `getPromoCodesAction`.
+- `handleDelete` now calls `deletePromoCodeAction` and removes item from local state.
+- `handleToggleActive` now calls `updatePromoCodeAction({ active: !current })` and updates local state.
+- Added toggle Power button to the actions column in the table.
+
+### ADMIN-003 — Customers page promote-to-admin was a stub ✅ Fixed
+- Added `promoteToAdminAction` to `user.actions.ts` (verifies requester is admin, then updates role).
+- `handlePromoteToAdmin` now calls the action and updates local state on success.
+
+### ADMIN-004 — Inventory page Low Stock filter not applied ✅ Fixed
+- `filterLowStock` state was toggled but the rendered list was not filtered.
+- Added `displayedItems` derived variable; table now renders `displayedItems` instead of `items`.
+
+### ADMIN-005 — `failed` order status missing from order detail page ✅ Fixed
+- Added `failed` to the `OrderDetails.status` type and `statusConfig` map.
+- Added `failed` option to the status update dropdown.
 
 ---
 

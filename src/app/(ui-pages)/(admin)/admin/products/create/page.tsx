@@ -42,17 +42,22 @@ export default function CreateProductPage() {
   }, []);
 
   const handleSubmit = async (data: any) => {
-    try {
-      // TODO: Call createProductAction(data)
-      // const result = await createProductAction(data);
-      // if (!result.success) {
-      //   throw new Error(result.error);
-      // }
-      console.log("Creating product:", data);
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
+    const { createProductAction } = await import("@/lib/actions/product.actions");
+    const result = await createProductAction({
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      availableQuantity: data.availableQuantity,
+      categoryId: data.categoryId,
+      type: data.type,
+      images: data.images,
+      tags: [],
+      whatIncluded: data.whatIncluded,
+      perfectFor: data.perfectFor,
+      whyChoose: data.whyChoose,
+      deliveryInfo: data.deliveryInfo,
+    });
+    if (!result.success) throw new Error(result.error);
   };
 
   return (

@@ -3,7 +3,7 @@ import { ProductCard } from "@/components/product/ProductCard";
 
 export async function BestSellingSection() {
   // Fetch products - you can add a filter for featured or best-selling
-  const result = await getProductsAction({ limit: 4, offset: 0 });
+  const result = await getProductsAction({ limit: 8, offset: 0 });
   const products = result.success ? result.data : [];
 
   if (!products || products.length === 0) {

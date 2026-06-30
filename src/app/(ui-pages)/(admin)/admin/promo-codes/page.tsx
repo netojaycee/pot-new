@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tag, Plus, Edit2, Trash2, Search, Copy } from "lucide-react";
+import { Tag, Plus, Edit2, Trash2, Search, Copy, Power } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -18,6 +18,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  getPromoCodesAction,
+  deletePromoCodeAction,
+  updatePromoCodeAction,
+} from "@/lib/actions/promo-code.actions";
 
 interface PromoCode {
   id: string;
@@ -38,13 +43,22 @@ export default function PromoCodesPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    // Fetch promo codes
     const fetchPromoCodes = async () => {
-      // TODO: Call getPromoCodesAction()
-      setLoading(false);
+      try {
+        const result = await getPromoCodesAction({ search: search || undefined });
+        if (result.success && "data" in result) {
+          setPromoCodes((result.data as PromoCode[]) || []);
+        } else {
+          toast.error(result.error || "Failed to fetch promo codes");
+        }
+      } catch {
+        toast.error("Failed to fetch promo codes");
+      } finally {
+        setLoading(false);
+      }
     };
     fetchPromoCodes();
-  }, []);
+  }, [search]);
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -53,20 +67,30 @@ export default function PromoCodesPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      // Call delete action
-      toast.success("Promo code deleted");
-    } catch (error) {
+      const result = await deletePromoCodeAction(id);
+      if (result.success) {
+        setPromoCodes((prev) => prev.filter((p) => p.id !== id));
+        toast.success("Promo code deleted");
+      } else {
+        toast.error(result.error || "Failed to delete promo code");
+      }
+    } catch {
       toast.error("Failed to delete promo code");
     }
   };
 
-  const handleToggleActive = async (id: string, active: boolean) => {
+  const handleToggleActive = async (id: string, currentActive: boolean) => {
     try {
-      // Call update action
-      toast.success(
-        active ? "Promo code activated" : "Promo code deactivated"
-      );
-    } catch (error) {
+      const result = await updatePromoCodeAction(id, { active: !currentActive });
+      if (result.success) {
+        setPromoCodes((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, active: !currentActive } : p))
+        );
+        toast.success(!currentActive ? "Promo code activated" : "Promo code deactivated");
+      } else {
+        toast.error(result.error || "Failed to update promo code");
+      }
+    } catch {
       toast.error("Failed to update promo code");
     }
   };
@@ -226,6 +250,14 @@ export default function PromoCodesPage() {
                       </td>
                       <td className="py-4 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleActive(promo.id, promo.active)}
+                            title={promo.active ? "Deactivate" : "Activate"}
+                          >
+                            <Power className={`w-4 h-4 ${promo.active ? "text-green-600" : "text-gray-400"}`} />
+                          </Button>
                           <Link href={`/admin/promo-codes/${promo.id}/edit`}>
                             <Button variant="ghost" size="sm">
                               <Edit2 className="w-4 h-4" />

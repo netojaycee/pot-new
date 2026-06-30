@@ -70,7 +70,7 @@ export function CategoryForm({
   const handleSelectChange = (name: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
-      [name]: value || undefined,
+      [name]: (value === "__none__" || value === "") ? undefined : value,
     }));
     if (errors[name as keyof CategoryFormData]) {
       setErrors((prev) => ({
@@ -178,7 +178,7 @@ export function CategoryForm({
             <SelectValue placeholder="Select parent category (optional)" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="no parent">No Parent</SelectItem>
+            <SelectItem value="__none__">No Parent</SelectItem>
             {availableParents.map((cat) => (
               <SelectItem key={cat.id} value={cat.id}>
                 {cat.name}

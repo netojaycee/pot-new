@@ -21,7 +21,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Pagination,
@@ -54,8 +53,8 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -98,7 +97,7 @@ export default function ProductsPage() {
         setProducts(products.filter(p => p.id !== id));
         setTotal(total - 1);
         toast.success("Product deleted successfully");
-        setIsDialogOpen(false);
+        setConfirmId(null);
       } else {
         toast.error(result.error || "Failed to delete product");
       }
@@ -218,37 +217,14 @@ export default function ProductsPage() {
                               <Edit2 className="w-4 h-4" />
                             </Button>
                           </Link>
-                          <Dialog open={isDialogOpen && deletingId === product.id} onOpenChange={setIsDialogOpen}>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Delete Product</DialogTitle>
-                                <DialogDescription>
-                                  Are you sure you want to delete this product? This action cannot be undone.
-                                </DialogDescription>
-                              </DialogHeader>
-                              <DialogFooter>
-                                <Button
-                                  variant="outline"
-                                  onClick={() => setIsDialogOpen(false)}
-                                  disabled={deletingId === product.id}
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  onClick={() => handleDelete(product.id)}
-                                  disabled={deletingId === product.id}
-                                >
-                                  {deletingId === product.id ? "Deleting..." : "Delete"}
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => setConfirmId(product.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -334,6 +310,34 @@ export default function ProductsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!confirmId} onOpenChange={(open) => { if (!open) setConfirmId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Product</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this product? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmId(null)}
+              disabled={!!deletingId}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => confirmId && handleDelete(confirmId)}
+              disabled={!!deletingId}
+            >
+              {deletingId ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

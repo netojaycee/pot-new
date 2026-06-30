@@ -355,29 +355,48 @@ export async function deleteAddressAction(addressId: string) {
     };
   }
 }
-interface GetAllCustomersParams {
-  limit: number;
-  offset: number;
-  search: string;
+/**
+ * Promote a user to admin role (admin only)
+ */
+export async function promoteToAdminAction(userId: string): Promise<any> {
+  try {
+    const session = await getSession();
+    if (!session || !("userId" in session)) {
+      return { success: false, error: "Unauthorized", code: "UNAUTHORIZED" };
+    }
+
+    const { prisma } = await import("@/lib/db");
+    const requester = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { role: true },
+    });
+    if (!requester || requester.role !== "admin") {
+      return { success: false, error: "Forbidden: admin access required", code: "FORBIDDEN" };
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { role: "admin" },
+    });
+
+    revalidatePath("/admin/customers");
+    return { success: true };
+  } catch (error) {
+    console.error("Promote to admin error:", error);
+    return { success: false, error: "Failed to promote user", code: "UPDATE_ERROR" };
+  }
 }
 
-/**
- * Get all customers
- */
 export async function getAllCustomersAction(
   limit: number,
   offset: number,
   search: string,
 ): Promise<any> {
   try {
-    // const session = await getSession();
-    // if (!session || !("userId" in session)) {
-    //   return {
-    //     success: false,
-    //     error: "Unauthorized",
-    //     code: "UNAUTHORIZED",
-    //   };
-    // }
+    const session = await getSession();
+    if (!session || !("userId" in session)) {
+      return { success: false, error: "Unauthorized", code: "UNAUTHORIZED" };
+    }
 
     return await userService.getAllCustomers(limit, offset, search);
   } catch (error) {

@@ -22,12 +22,10 @@ import {
 
 async function requireAdmin() {
   const session = await getSession();
-  if (!session || !("userId" in session)) {
-    return null;
-  }
-
-  // TODO: Verify user.role === "ADMIN" from database
-  // For now, we'll assume the action checks this in the service layer
+  if (!session || !("userId" in session)) return null;
+  const { prisma } = await import("@/lib/db");
+  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { role: true } });
+  if (!user || user.role !== "admin") return null;
   return session.userId;
 }
 

@@ -4,7 +4,6 @@ import {
 } from "@/lib/actions/product.actions";
 import { getProductReviewsAction } from "@/lib/actions/review.actions";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { AddToCartButton } from "@/components/product/AddToCartButton";
 import { ProductCard } from "@/components/product/ProductCard";
 import { ProductGallery } from "@/components/product/ProductGallery";
@@ -23,7 +22,7 @@ interface ProductPageProps {
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
-  const { slug, type } = await params;
+  const { slug } = await params;
 
   // Fetch product by slug using server action
   const result = await getProductAction(slug);
@@ -48,38 +47,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
     ? relatedResult.data
     : ([] as typeof relatedResult.data);
 
-  // Use product data or fallbacks for accordion content
-  const whatIncluded = product.whatIncluded?.length
-    ? product.whatIncluded
-    : ([
-        "Chocolate",
-        "Chips",
-        "Cookies",
-        "Water",
-        "Branded pen",
-        "Crisps",
-        "Biscuits",
-      ] as string[]);
-
-  const perfectFor = product.perfectFor?.length
-    ? product.perfectFor
-    : (["Anniversaries", "Employee incentives", "Casual Gifting"] as string[]);
-
-  const whyChoose = product.whyChoose?.length
-    ? product.whyChoose
-    : [
-        "Budget-friendly without compromising quality",
-        "Seasonal and festive occasions",
-        "Perfect gift for all ages and packaging occasions",
-      ];
-
-  const deliveryInfo = product.deliveryInfo || {
-    title: "Royal Mail 24/7-verified Delivery - £4.50 | 2-4 days.",
-    details: [
-      "Acceptable ID includes a passport or driving license.",
-      "If no suitable ID is provided, Royal Mail will leave instructions for redelivery or collection.",
-    ],
-  };
+  const whatIncluded: string[] = product.whatIncluded?.length ? product.whatIncluded : [];
+  const perfectFor: string[] = product.perfectFor?.length ? product.perfectFor : [];
+  const whyChoose: string[] = product.whyChoose?.length ? product.whyChoose : [];
+  const deliveryInfo = product.deliveryInfo as { title: string; details: string[] } | null ?? null;
 
   return (
     <div className="bg-white">
@@ -131,30 +102,32 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </div>
 
             {/* What's Included */}
-            <Accordion
-              type="single"
-              collapsible
-              className="bg-[#E5E5E5]/30 p-2"
-            >
-              <AccordionItem value="included" className="border-0">
-                <AccordionTrigger className="py-3 underline underline-offset-3 text-gray-900 font-semibold">
-                  What&apos;s included?
-                </AccordionTrigger>
-                <AccordionContent className="pb-4 ">
-                  <ul className="space-y-2">
-                    {whatIncluded.map((item: string, idx: number) => (
-                      <li
-                        key={idx}
-                        className="text-sm text-gray-700 flex items-start gap-2"
-                      >
-                        <span className="text-gray-400">•</span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+            {whatIncluded.length > 0 && (
+              <Accordion
+                type="single"
+                collapsible
+                className="bg-[#E5E5E5]/30 p-2"
+              >
+                <AccordionItem value="included" className="border-0">
+                  <AccordionTrigger className="py-3 underline underline-offset-3 text-gray-900 font-semibold">
+                    What&apos;s included?
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-4 ">
+                    <ul className="space-y-2">
+                      {whatIncluded.map((item: string, idx: number) => (
+                        <li
+                          key={idx}
+                          className="text-sm text-gray-700 flex items-start gap-2"
+                        >
+                          <span className="text-gray-400">•</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            )}
 
             {/* Price */}
             <div>
@@ -198,73 +171,83 @@ export default async function ProductPage({ params }: ProductPageProps) {
         {/* Reviews Section */}
         {/* Additional Info Accordions */}
         <div className="mt-8 space-y-3">
-          <Accordion type="single" collapsible className="bg-[#E5E5E5]/30 p-2">
-            <AccordionItem value="perfect" className="">
-              <AccordionTrigger className="px-4 py-3 underline underline-offset-3">
-                Perfect For?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <ul className="space-y-2">
-                  {perfectFor.map((item: string, idx: number) => (
-                    <li
-                      key={idx}
-                      className="text-sm text-gray-700 flex items-start gap-2"
-                    >
-                      <span className="text-gray-400">•</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-
-          <Accordion type="single" collapsible className="bg-[#E5E5E5]/30 p-2">
-            <AccordionItem value="why" className="">
-              <AccordionTrigger className="px-4 py-3 underline underline-offset-3">
-                Why Choose this Package?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <ul className="space-y-2">
-                  {whyChoose.map((item: string, idx: number) => (
-                    <li
-                      key={idx}
-                      className="text-sm text-gray-700 flex items-start gap-2"
-                    >
-                      <span className="text-gray-400">•</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-
-          <Accordion type="single" collapsible className="bg-[#E5E5E5]/30 p-2">
-            <AccordionItem value="delivery" className="">
-              <AccordionTrigger className="px-4 py-3 underline underline-offset-3">
-                Delivery
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold text-gray-900">
-                    {deliveryInfo.title}
-                  </p>
+          {perfectFor.length > 0 && (
+            <Accordion type="single" collapsible className="bg-[#E5E5E5]/30 p-2">
+              <AccordionItem value="perfect" className="">
+                <AccordionTrigger className="px-4 py-3 underline underline-offset-3">
+                  Perfect For?
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
                   <ul className="space-y-2">
-                    {deliveryInfo.details.map((detail: string, idx: number) => (
+                    {perfectFor.map((item: string, idx: number) => (
                       <li
                         key={idx}
                         className="text-sm text-gray-700 flex items-start gap-2"
                       >
                         <span className="text-gray-400">•</span>
-                        {detail}
+                        {item}
                       </li>
                     ))}
                   </ul>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+
+          {whyChoose.length > 0 && (
+            <Accordion type="single" collapsible className="bg-[#E5E5E5]/30 p-2">
+              <AccordionItem value="why" className="">
+                <AccordionTrigger className="px-4 py-3 underline underline-offset-3">
+                  Why Choose this Package?
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <ul className="space-y-2">
+                    {whyChoose.map((item: string, idx: number) => (
+                      <li
+                        key={idx}
+                        className="text-sm text-gray-700 flex items-start gap-2"
+                      >
+                        <span className="text-gray-400">•</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+
+          {deliveryInfo && (
+            <Accordion type="single" collapsible className="bg-[#E5E5E5]/30 p-2">
+              <AccordionItem value="delivery" className="">
+                <AccordionTrigger className="px-4 py-3 underline underline-offset-3">
+                  Delivery
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <div className="space-y-3">
+                    {deliveryInfo.title && (
+                      <p className="text-sm font-semibold text-gray-900">
+                        {deliveryInfo.title}
+                      </p>
+                    )}
+                    {deliveryInfo.details?.length > 0 && (
+                      <ul className="space-y-2">
+                        {deliveryInfo.details.map((detail: string, idx: number) => (
+                          <li
+                            key={idx}
+                            className="text-sm text-gray-700 flex items-start gap-2"
+                          >
+                            <span className="text-gray-400">•</span>
+                            {detail}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
         </div>
 
         {/* You May Also Like */}
@@ -283,3 +266,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
     </div>
   );
 }
+
+
+

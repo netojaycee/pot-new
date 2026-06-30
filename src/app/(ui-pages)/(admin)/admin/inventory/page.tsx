@@ -80,6 +80,7 @@ export default function InventoryPage() {
   }, 0);
 
   const lowStockCount = items.filter(isLowStock).length;
+  const displayedItems = filterLowStock ? items.filter(isLowStock) : items;
 
   return (
     <div className="space-y-6">
@@ -168,10 +169,12 @@ export default function InventoryPage() {
                 <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
-          ) : items.length === 0 ? (
+          ) : displayedItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Warehouse className="w-12 h-12 text-gray-300 mb-4" />
-              <p className="text-gray-600 font-medium">No inventory items</p>
+              <p className="text-gray-600 font-medium">
+                {filterLowStock ? "No low stock items" : "No inventory items"}
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -188,7 +191,7 @@ export default function InventoryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => {
+                  {displayedItems.map((item) => {
                     const lowStock = isLowStock(item);
                     return (
                       <tr key={item.id} className="border-b hover:bg-gray-50">

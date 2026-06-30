@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Search, Mail, Phone, Eye, Shield } from "lucide-react";
+import { Users, Search, Mail, Phone, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -18,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { getAllCustomersAction } from "@/lib/actions/user.actions";
+import { getAllCustomersAction, promoteToAdminAction } from "@/lib/actions/user.actions";
 
 interface Customer {
   id: string;
@@ -62,9 +61,16 @@ export default function CustomersPage() {
 
   const handlePromoteToAdmin = async (userId: string) => {
     try {
-      // Call action to promote user
-      toast.success("User promoted to admin");
-    } catch (error) {
+      const result = await promoteToAdminAction(userId);
+      if (result.success) {
+        setCustomers((prev) =>
+          prev.map((c) => (c.id === userId ? { ...c, role: "admin" as const } : c))
+        );
+        toast.success("User promoted to admin");
+      } else {
+        toast.error(result.error || "Failed to promote user");
+      }
+    } catch {
       toast.error("Failed to promote user");
     }
   };
@@ -151,6 +157,7 @@ export default function CustomersPage() {
                     <th className="text-left py-3 px-4 font-semibold">Name</th>
                     <th className="text-left py-3 px-4 font-semibold">Email</th>
                     <th className="text-left py-3 px-4 font-semibold">Phone</th>
+                    
                     <th className="text-left py-3 px-4 font-semibold">Orders</th>
                     <th className="text-left py-3 px-4 font-semibold">Total Spent</th>
                     <th className="text-left py-3 px-4 font-semibold">Status</th>
@@ -202,11 +209,11 @@ export default function CustomersPage() {
                       </td>
                       <td className="py-4 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Link href={`/admin/customers/${customer.id}`}>
+                          {/* <Link href={`/admin/customers/${customer.id}`}>
                             <Button variant="ghost" size="sm">
                               <Eye className="w-4 h-4" />
                             </Button>
-                          </Link>
+                          </Link> */}
                           {customer.role !== "admin" && (
                             <Dialog>
                               <DialogTrigger asChild>

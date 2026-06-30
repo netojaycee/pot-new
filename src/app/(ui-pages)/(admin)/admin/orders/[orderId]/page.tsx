@@ -42,7 +42,7 @@ interface OrderItem {
 interface OrderDetails {
   id: string;
   orderNumber: string;
-  status: "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled";
+  status: "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled" | "failed";
   firstName: string;
   lastName: string;
   email: string;
@@ -86,6 +86,7 @@ export default function OrderDetailsPage() {
   const [statusChanging, setStatusChanging] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<string>("");
+  const [emailSending, setEmailSending] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -140,6 +141,28 @@ export default function OrderDetailsPage() {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!order) return;
+    try {
+      setEmailSending(true);
+      const { resendOrderConfirmationAction } = await import("@/lib/actions/order.actions");
+      const result = await resendOrderConfirmationAction(order.id);
+      if (result.success) {
+        toast.success("Order confirmation email sent");
+      } else {
+        toast.error(result.error || "Failed to send email");
+      }
+    } catch {
+      toast.error("Failed to send email");
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   const statusConfig: Record<string, { label: string; color: string }> = {
     pending: { label: "Pending", color: "bg-yellow-100 text-yellow-800" },
     paid: { label: "Paid", color: "bg-blue-100 text-blue-800" },
@@ -147,6 +170,7 @@ export default function OrderDetailsPage() {
     shipped: { label: "Shipped", color: "bg-orange-100 text-orange-800" },
     delivered: { label: "Delivered", color: "bg-green-100 text-green-800" },
     cancelled: { label: "Cancelled", color: "bg-red-100 text-red-800" },
+    failed: { label: "Failed", color: "bg-red-100 text-red-800" },
   };
 
   if (loading) {
@@ -166,7 +190,7 @@ export default function OrderDetailsPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2">
-          <Link href="/admin/admin/orders">
+          <Link href="/admin/orders">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4" />
             </Button>
@@ -184,7 +208,7 @@ export default function OrderDetailsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/admin/admin/orders">
+          <Link href="/admin/orders">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4" />
             </Button>
@@ -203,16 +227,16 @@ export default function OrderDetailsPage() {
             </p>
           </div>
         </div>
-        {/* <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handlePrint}>
             <Printer className="w-4 h-4 mr-2" />
             Print
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleSendEmail} disabled={emailSending}>
             <Mail className="w-4 h-4 mr-2" />
-            Send Email
+            {emailSending ? "Sending..." : "Send Email"}
           </Button>
-        </div> */}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -252,6 +276,7 @@ export default function OrderDetailsPage() {
                           <SelectItem value="shipped">Shipped</SelectItem>
                           <SelectItem value="delivered">Delivered</SelectItem>
                           <SelectItem value="cancelled">Cancelled</SelectItem>
+                          <SelectItem value="failed">Failed</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

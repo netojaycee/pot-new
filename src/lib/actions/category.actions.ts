@@ -9,6 +9,7 @@ import {
   updateCategorySchema,
 } from "@/lib/services/category.service";
 import { revalidatePath } from "next/cache";
+import { generateSlug } from "@/lib/utils";
 
 // ============ PUBLIC READ ACTIONS ============
 
@@ -79,13 +80,14 @@ export async function createCategoryAction(input: CreateCategoryInput) {
       };
     }
 
-    // TODO: Add role check when user service ready
-    // const user = await getUser(session.userId);
-    // if (user?.role !== "admin") {
-    //   return { success: false, error: "Admin access required", code: "FORBIDDEN" };
-    // }
+    const { prisma } = await import("@/lib/db");
+    const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { role: true } });
+    if (!user || user.role !== "admin") {
+      return { success: false, error: "Forbidden: admin access required", code: "FORBIDDEN" };
+    }
 
-    const validated = createCategorySchema.safeParse(input);
+    const enriched = { ...input, slug: generateSlug(input.name || "") };
+    const validated = createCategorySchema.safeParse(enriched);
     if (!validated.success) {
       return {
         success: false,
@@ -126,6 +128,12 @@ export async function updateCategoryAction(id: string, input: UpdateCategoryInpu
       };
     }
 
+    const { prisma } = await import("@/lib/db");
+    const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { role: true } });
+    if (!user || user.role !== "admin") {
+      return { success: false, error: "Forbidden: admin access required", code: "FORBIDDEN" };
+    }
+
     if (!id || id.trim() === "") {
       return {
         success: false,
@@ -134,7 +142,8 @@ export async function updateCategoryAction(id: string, input: UpdateCategoryInpu
       };
     }
 
-    const validated = updateCategorySchema.safeParse(input);
+    const enriched = input.name ? { ...input, slug: generateSlug(input.name) } : input;
+    const validated = updateCategorySchema.safeParse(enriched);
     if (!validated.success) {
       return {
         success: false,
@@ -173,6 +182,12 @@ export async function deleteCategoryAction(id: string) {
         error: "Unauthorized",
         code: "UNAUTHORIZED",
       };
+    }
+
+    const { prisma } = await import("@/lib/db");
+    const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { role: true } });
+    if (!user || user.role !== "admin") {
+      return { success: false, error: "Forbidden: admin access required", code: "FORBIDDEN" };
     }
 
     if (!id || id.trim() === "") {

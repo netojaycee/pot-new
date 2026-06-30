@@ -1,0 +1,45 @@
+
+const whatIncluded = product.whatIncluded?.length
+    ? product.whatIncluded
+    : ([
+        "Chocolate",
+        "Chips",
+        "Cookies",
+        "Water",
+        "Branded pen",
+        "Crisps",
+        "Biscuits",
+      ] as string[]);
+
+  const perfectFor = product.perfectFor?.length
+    ? product.perfectFor
+    : (["Anniversaries", "Employee incentives", "Casual Gifting"] as string[]);
+
+  const whyChoose = product.whyChoose?.length
+    ? product.whyChoose
+    : [
+        "Budget-friendly without compromising quality",
+        "Seasonal and festive occasions",
+        "Perfect gift for all ages and packaging occasions",
+      ];
+
+  const deliveryInfo = product.deliveryInfo || {
+    title: "Royal Mail 24/7-verified Delivery - £4.50 | 2-4 days.",
+    details: [
+      "Acceptable ID includes a passport or driving license.",
+      "If no suitable ID is provided, Royal Mail will leave instructions for redelivery or collection.",
+    ],
+  };
+
+  
+  Ran 1 shell command
+
+Clean. Two fixes:
+
+Analytics â Conversion Rate: Replaced -- / "(Pro feature)" with a real metric: (paid + processing + shipped + delivered orders) Ã· total orders Ã 100. Uses the existing ordersByStatus data already returned by the action.
+
+Delete Category: The delete was failing silently because Prisma throws a foreign key constraint error when the category has children or products assigned. Now it checks first and returns a specific user-friendly message:
+- "Cannot delete a category that has sub-categories. Remove the sub-categories first."
+- "Cannot delete a category that has N product(s) assigned to it. Reassign or delete those products first."
+
+The toast on the categories page already shows result.error, so these messages will appear directly to the user.

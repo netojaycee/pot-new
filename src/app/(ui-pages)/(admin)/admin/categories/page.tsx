@@ -17,7 +17,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Pagination,
@@ -34,7 +33,7 @@ interface Category {
   name: string;
   description?: string;
   type: "item" | "food" | "giftbox";
-  productCount: number;
+  _count: { products: number };
   parent?: { name: string };
   createdAt: string;
 }
@@ -47,8 +46,8 @@ export default function CategoriesPage() {
   const [search, setSearch] = useState("");
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -99,7 +98,7 @@ export default function CategoriesPage() {
         setCategories(categories.filter(c => c.id !== id));
         setTotal(total - 1);
         toast.success("Category deleted successfully");
-        setIsDialogOpen(false);
+        setConfirmId(null);
       } else {
         toast.error(result.error || "Failed to delete category");
       }
@@ -164,7 +163,7 @@ export default function CategoriesPage() {
             <div className="text-center">
               <p className="text-gray-600 text-sm">Total Products</p>
               <p className="text-3xl font-bold text-primary">
-                {categories.reduce((sum, c) => sum + c.productCount, 0)}
+                {categories.reduce((sum, c) => sum + (c._count?.products ?? 0), 0)}
               </p>
             </div>
           </CardContent>
@@ -176,7 +175,7 @@ export default function CategoriesPage() {
               <p className="text-3xl font-bold text-primary">
                 {categories.length > 0
                   ? Math.round(
-                      categories.reduce((sum, c) => sum + c.productCount, 0) /
+                      categories.reduce((sum, c) => sum + (c._count?.products ?? 0), 0) /
                         categories.length
                     )
                   : 0}
@@ -241,7 +240,7 @@ export default function CategoriesPage() {
                       </td>
                       <td className="py-4 px-4">
                         <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                          {category.productCount}
+                          {(category._count?.products ?? 0)}
                         </span>
                       </td>
                       <td className="py-4 px-4 text-right">
@@ -251,42 +250,14 @@ export default function CategoriesPage() {
                               <Edit2 className="w-4 h-4" />
                             </Button>
                           </Link>
-                          <Dialog open={isDialogOpen && deletingId === category.id} onOpenChange={setIsDialogOpen}>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Delete Category</DialogTitle>
-                                <DialogDescription>
-                                  Are you sure you want to delete this category?
-                                  This action cannot be undone.
-                                </DialogDescription>
-                              </DialogHeader>
-                              <DialogFooter>
-                                <Button 
-                                  variant="outline"
-                                  onClick={() => setIsDialogOpen(false)}
-                                  disabled={deletingId === category.id}
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  onClick={() => handleDelete(category.id)}
-                                  disabled={deletingId === category.id}
-                                >
-                                  {deletingId === category.id ? "Deleting..." : "Delete"}
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => setConfirmId(category.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -372,6 +343,34 @@ export default function CategoriesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!confirmId} onOpenChange={(open) => { if (!open) setConfirmId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Category</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this category? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmId(null)}
+              disabled={!!deletingId}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => confirmId && handleDelete(confirmId)}
+              disabled={!!deletingId}
+            >
+              {deletingId ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

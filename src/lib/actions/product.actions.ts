@@ -8,6 +8,7 @@ import {
   createProductSchema,
   updateProductSchema,
 } from "@/lib/services/product.service";
+import { cloudinaryService } from "@/lib/services/cloudinary.service";
 import { revalidatePath } from "next/cache";
 
 // ============ USER READ ACTIONS ============
@@ -108,11 +109,11 @@ export async function createProductAction(input: CreateProductInput) {
       };
     }
 
-    // TODO: Add role check when user service is ready
-    // const user = await getUser(session.userId);
-    // if (user?.role !== "admin") {
-    //   return { success: false, error: "Admin access required", code: "FORBIDDEN" };
-    // }
+    const { prisma } = await import("@/lib/db");
+    const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { role: true } });
+    if (!user || user.role !== "admin") {
+      return { success: false, error: "Forbidden: admin access required", code: "FORBIDDEN" };
+    }
 
     // Validate input
     const validated = createProductSchema.safeParse(input);
@@ -159,11 +160,11 @@ export async function updateProductAction(id: string, input: UpdateProductInput)
       };
     }
 
-    // TODO: Add role check
-    // const user = await getUser(session.userId);
-    // if (user?.role !== "admin") {
-    //   return { success: false, error: "Admin access required", code: "FORBIDDEN" };
-    // }
+    const { prisma } = await import("@/lib/db");
+    const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { role: true } });
+    if (!user || user.role !== "admin") {
+      return { success: false, error: "Forbidden: admin access required", code: "FORBIDDEN" };
+    }
 
     if (!id || id.trim() === "") {
       return {
@@ -219,11 +220,11 @@ export async function deleteProductAction(id: string) {
       };
     }
 
-    // TODO: Add role check
-    // const user = await getUser(session.userId);
-    // if (user?.role !== "admin") {
-    //   return { success: false, error: "Admin access required", code: "FORBIDDEN" };
-    // }
+    const { prisma } = await import("@/lib/db");
+    const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { role: true } });
+    if (!user || user.role !== "admin") {
+      return { success: false, error: "Forbidden: admin access required", code: "FORBIDDEN" };
+    }
 
     if (!id || id.trim() === "") {
       return {
@@ -270,11 +271,11 @@ export async function updateProductStockAction(
       };
     }
 
-    // TODO: Add role check
-    // const user = await getUser(session.userId);
-    // if (user?.role !== "admin") {
-    //   return { success: false, error: "Admin access required", code: "FORBIDDEN" };
-    // }
+    const { prisma } = await import("@/lib/db");
+    const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { role: true } });
+    if (!user || user.role !== "admin") {
+      return { success: false, error: "Forbidden: admin access required", code: "FORBIDDEN" };
+    }
 
     if (!productId || productId.trim() === "") {
       return {
@@ -307,5 +308,38 @@ export async function updateProductStockAction(
       error: "Failed to update stock",
       code: "UPDATE_ERROR",
     };
+  }
+}
+
+export async function uploadProductImageAction(formData: FormData) {
+  try {
+    const session = await getSession();
+    if (!session || !("userId" in session)) return { success: false, error: "Unauthorized" };
+    const { prisma } = await import("@/lib/db");
+    const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { role: true } });
+    if (!user || user.role !== "admin") return { success: false, error: "Forbidden" };
+    const file = formData.get("file") as File;
+    if (!file || !(file instanceof File)) return { success: false, error: "No file provided" };
+    const result = await cloudinaryService.uploadImage(file, "pot/products");
+    if (!result.success) return { success: false, error: result.error };
+    return { success: true, data: { url: result.data.secureUrl, pubId: result.data.pubId } };
+  } catch (error) {
+    console.error("Upload product image error:", error);
+    return { success: false, error: "Failed to upload image" };
+  }
+}
+
+export async function deleteProductImageAction(pubId: string) {
+  try {
+    const session = await getSession();
+    if (!session || !("userId" in session)) return { success: false, error: "Unauthorized" };
+    const { prisma } = await import("@/lib/db");
+    const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { role: true } });
+    if (!user || user.role !== "admin") return { success: false, error: "Forbidden" };
+    const result = await cloudinaryService.deleteImage(pubId);
+    return result.success ? { success: true } : { success: false, error: result.error };
+  } catch (error) {
+    console.error("Delete product image error:", error);
+    return { success: false, error: "Failed to delete image" };
   }
 }

@@ -207,12 +207,35 @@ export const categoryService = {
    */
   async deleteCategory(id: string): Promise<CategoryResult<any>> {
     try {
-      const category = await prisma.category.delete({
+      const existing = await prisma.category.findUnique({
         where: { id },
+        include: {
+          _count: { select: { children: true, products: true } },
+        },
       });
 
-      await invalidateCategoryCache(id);
+      if (!existing) {
+        return { success: false, error: "Category not found", code: "NOT_FOUND" };
+      }
 
+      if (existing._count.children > 0) {
+        return {
+          success: false,
+          error: "Cannot delete a category that has sub-categories. Remove the sub-categories first.",
+          code: "HAS_CHILDREN",
+        };
+      }
+
+      if (existing._count.products > 0) {
+        return {
+          success: false,
+          error: `Cannot delete a category that has ${existing._count.products} product(s) assigned to it. Reassign or delete those products first.`,
+          code: "HAS_PRODUCTS",
+        };
+      }
+
+      const category = await prisma.category.delete({ where: { id } });
+      await invalidateCategoryCache(id);
       return { success: true, data: category };
     } catch (error) {
       console.error("Delete category error:", error);

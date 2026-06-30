@@ -21,15 +21,10 @@ export default function CreateCategoryPage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        // TODO: Replace with getCategoriesAction()
-        // const result = await getCategoriesAction();
-        // if (result.success) {
-        //   setCategories(result.data);
-        // }
-        setCategories([
-          { id: "1", name: "Electronics" },
-          { id: "2", name: "Clothing" },
-        ]);
+        const { getCategoriesAction } = await import("@/lib/actions/category.actions");
+        const result = await getCategoriesAction();
+        if (result.success) setCategories(result.data || []);
+        else toast.error("Failed to load categories");
       } catch (error) {
         console.error(error);
         toast.error("Failed to load categories");
@@ -42,13 +37,9 @@ export default function CreateCategoryPage() {
   }, []);
 
   const handleSubmit = async (data: any) => {
-    try {
-      // TODO: Call createCategoryAction(data)
-      console.log("Creating category:", data);
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
+    const { createCategoryAction } = await import("@/lib/actions/category.actions");
+    const result = await createCategoryAction(data);
+    if (!result.success) throw new Error(result.error);
   };
 
   return (

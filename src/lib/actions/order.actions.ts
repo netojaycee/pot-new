@@ -7,6 +7,7 @@ import { orderService, CreateOrderInput } from "@/lib/services/order.service";
 import { cartService } from "@/lib/services/cart.service";
 import { paymentService } from "@/lib/services/payment.service";
 import { checkoutFormSchema, type CheckoutFormInput } from "@/lib/schema/checkout.schema";
+import { sendOrderConfirmationEmail } from "@/lib/email";
 
 // ============ HELPERS ============
 
@@ -422,6 +423,68 @@ export async function updateOrderStatusAction(
       error: "Failed to update order status",
       code: "UPDATE_ERROR",
     };
+  }
+}
+
+/**
+ * Resend order confirmation email (admin only)
+ */
+export async function resendOrderConfirmationAction(orderId: string) {
+  try {
+    const session = await getSession();
+    if (!session || !("userId" in session)) {
+      return { success: false, error: "Unauthorized", code: "UNAUTHORIZED" };
+    }
+
+    const { prisma } = await import("@/lib/db");
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { role: true },
+    });
+    if (!user || user.role !== "admin") {
+      return { success: false, error: "Forbidden: admin access required", code: "FORBIDDEN" };
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: { include: { product: { select: { name: true } } } },
+        promoCode: { select: { code: true } },
+      },
+    });
+
+    if (!order) {
+      return { success: false, error: "Order not found", code: "NOT_FOUND" };
+    }
+
+    if (!order.email) {
+      return { success: false, error: "Order has no email address", code: "NO_EMAIL" };
+    }
+
+    await sendOrderConfirmationEmail(order.email, {
+      firstName: order.firstName ?? "",
+      orderNumber: order.orderNumber,
+      orderId: order.id,
+      items: order.items.map((item) => ({
+        name: item.product.name,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+      subtotal: order.subtotal ?? 0,
+      discountAmount: order.discountAmount ?? 0,
+      tax: order.tax ?? 0,
+      shippingFee: order.shippingFee ?? 0,
+      total: order.total,
+      deliveryAddress: order.deliveryAddress as any,
+      occasion: order.occasion ?? undefined,
+      specialMessage: order.specialMessage ?? undefined,
+      promoCode: order.promoCode?.code,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Resend order confirmation error:", error);
+    return { success: false, error: "Failed to resend email", code: "EMAIL_ERROR" };
   }
 }
 

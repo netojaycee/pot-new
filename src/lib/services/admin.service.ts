@@ -198,16 +198,21 @@ export async function toggleProductStatus(
   isActive: boolean,
 ): Promise<AdminServiceResult<any>> {
   try {
-    // const product = await prisma.product.update({
-    //   where: { id: productId },
-    //   data: { isActive },
-    //   include: { category: true },
-    // });
-
-    // await redis.del(`product:${productId}`);
-    // await redis.del("products");
-
-    return { success: true, data: null };
+    if (!isActive) {
+      const product = await prisma.product.update({
+        where: { id: productId },
+        data: { availableQuantity: 0 },
+        include: { category: true },
+      });
+      await redis.del(`product:${productId}`);
+      await redis.del("products");
+      return { success: true, data: product };
+    }
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { category: true },
+    });
+    return { success: true, data: product };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2025") {
@@ -285,9 +290,15 @@ export async function updateCategory(
   try {
     const validated = updateCategorySchema.parse(data);
 
+    const updateData: Record<string, unknown> = { ...validated };
+    if ("parentCategoryId" in updateData) {
+      updateData.parentId = updateData.parentCategoryId || null;
+      delete updateData.parentCategoryId;
+    }
+
     const category = await prisma.category.update({
       where: { id: categoryId },
-      data: validated,
+      data: updateData,
       include: {
         parent: true,
         children: true,

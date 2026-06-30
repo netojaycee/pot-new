@@ -16,7 +16,7 @@ export const createProductSchema = z.object({
   price: z.number().positive("Price must be positive"),
   availableQuantity: z.number().int().nonnegative(),
   categoryId: z.string().min(1, "Category required"),
-  images: z.array(z.string().url()).min(1, "At least one image required"),
+  images: z.array(z.object({ url: z.string().url(), pubId: z.string() })).min(1, "At least one image required"),
   type: z.enum(["item", "food", "giftbox"]).default("item"),
   discountPercentage: z.number().nonnegative().optional(),
   discountExpiry: z.date().optional(),

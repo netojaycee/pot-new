@@ -71,13 +71,9 @@ export default function EditCategoryPage() {
   }, [categoryId]);
 
   const handleSubmit = async (data: FormData) => {
-    try {
-      // TODO: Call updateCategoryAction(categoryId, data)
-      console.log("Updating category:", categoryId, data);
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
+    const { updateCategoryAction } = await import("@/lib/actions/category.actions");
+    const result = await updateCategoryAction(categoryId, data as any);
+    if (!result.success) throw new Error(result.error);
   };
 
   if (!categoryId) return <div>Invalid category ID</div>;

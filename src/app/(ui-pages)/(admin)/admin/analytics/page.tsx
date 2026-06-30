@@ -151,7 +151,7 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversion</CardTitle>
+            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -159,9 +159,20 @@ export default function AnalyticsPage() {
               <Skeleton className="h-8 w-24" />
             ) : (
               <>
-                <div className="text-2xl font-bold">--</div>
+                <div className="text-2xl font-bold">
+                  {analytics && analytics.totalOrders > 0
+                    ? (() => {
+                        const successful =
+                          (analytics.ordersByStatus["paid"] || 0) +
+                          (analytics.ordersByStatus["processing"] || 0) +
+                          (analytics.ordersByStatus["shipped"] || 0) +
+                          (analytics.ordersByStatus["delivered"] || 0);
+                        return `${Math.round((successful / analytics.totalOrders) * 100)}%`;
+                      })()
+                    : "0%"}
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  (Pro feature)
+                  Orders reaching paid status
                 </p>
               </>
             )}
